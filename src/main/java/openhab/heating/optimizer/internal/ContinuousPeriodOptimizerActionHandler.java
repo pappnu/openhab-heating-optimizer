@@ -1,0 +1,135 @@
+package openhab.heating.optimizer.internal;
+
+import java.time.Duration;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.stream.StreamSupport;
+
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
+import org.openhab.core.automation.Action;
+import org.openhab.core.automation.handler.ActionHandler;
+import org.openhab.core.automation.handler.BaseModuleHandler;
+import org.openhab.core.items.ItemRegistry;
+import org.openhab.core.persistence.HistoricItem;
+import org.openhab.core.persistence.extensions.PersistenceExtensions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import openhab.heating.utils.Items;
+import openhab.heating.utils.TimeUtils;
+import openhab.heating.utils.Transform;
+
+@NonNullByDefault
+public class ContinuousPeriodOptimizerActionHandler extends BaseModuleHandler<Action> implements ActionHandler {
+    private final ItemRegistry itemRegistry;
+    private final Logger logger = LoggerFactory.getLogger(ContinuousPeriodOptimizerActionHandler.class);
+
+    public ContinuousPeriodOptimizerActionHandler(Action module, ItemRegistry itemRegistry) {
+        super(module);
+        this.itemRegistry = itemRegistry;
+    }
+
+    @Override
+    public @Nullable Map<String, @Nullable Object> execute(Map<String, Object> context) {
+        try {
+            var conf = module.getConfiguration().as(ContinuousPeriodOptimizerConfig.class);
+
+            var spotPricesItem = Items.getItem(itemRegistry, conf.spotPricesItem);
+            var controlItem = Items.getItem(itemRegistry, conf.controlItem);
+
+            var now = ZonedDateTime.now();
+            var today = now.truncatedTo(ChronoUnit.DAYS);
+            var dayAfterTomorrow = today.plusDays(2);
+            var optStart = TimeUtils.truncateToNextQuarterHour(now);
+
+            // Get spot prices spanning multiple days
+            var pricesIter = PersistenceExtensions.getAllStatesBetween(spotPricesItem, optStart,
+                    dayAfterTomorrow.minusSeconds(1), conf.persistenceServiceId);
+            if (pricesIter == null) {
+                throw new IllegalArgumentException("Spot prices iterator is null");
+            }
+            HistoricItem[] priceItems = StreamSupport.stream(pricesIter.spliterator(), false)
+                    .toArray(HistoricItem[]::new);
+            if (priceItems.length < 2) {
+                throw new IllegalArgumentException("Not enough spot prices for continuous period optimization");
+            }
+
+            var secondToLastPrice = priceItems[priceItems.length - 2];
+            var lastPrice = priceItems[priceItems.length - 1];
+
+            var lastTime = lastPrice.getTimestamp();
+            var timeStep = Duration.between(secondToLastPrice.getTimestamp(), lastTime);
+
+            // Convert prices to double array
+            double[] prices = Arrays.stream(priceItems).mapToDouble(item -> Items.getStateDouble(item.getState()))
+                    .toArray();
+
+            // Adjust price points to 15 minute frequency
+            prices = Transform.makePricesQuarterly(prices, timeStep);
+
+            int periodLength = TimeUtils.convertHoursToTimeSteps(conf.periodLength, timeStep);
+            int firstDaySteps = TimeUtils.convertToTimeSteps(Duration.between(optStart, today), timeStep);
+
+            // Find cheapest interval for today
+            if (firstDaySteps > 0) {
+                var firstDayResult = findCheapestInterval(Arrays.copyOf(prices, firstDaySteps), periodLength);
+                Items.persistControlPoints(controlItem, firstDayResult, optStart, timeStep, conf.persistenceServiceId);
+            }
+
+            // Find cheapest interval for tomorrow
+            var secondDayResult = findCheapestInterval(
+                    Arrays.copyOfRange(prices, Math.max(0, firstDaySteps - 1), prices.length), periodLength);
+            Items.persistControlPoints(controlItem, secondDayResult, today.plusDays(1), timeStep,
+                    conf.persistenceServiceId);
+
+        } catch (Exception e) {
+            logger.error("Failed to find optimal continuous heating period", e);
+            throw e;
+        }
+        return null;
+    }
+
+    /**
+     * Find the cheapest continuous interval of specified length in the price array
+     * 
+     * @param prices array of spot prices
+     * @param timeSteps length of cheapest period to seek
+     * @return array of zeroes and ones that matches prices in length. Ones indicate the cheapest period.
+     */
+    protected static double[] findCheapestInterval(double[] prices, int timeSteps) {
+
+        if (prices.length <= timeSteps) {
+            double[] result = new double[prices.length];
+            Arrays.fill(result, 1d);
+            return result;
+        }
+        if (timeSteps < 1) {
+            return new double[prices.length];
+        }
+
+        double minCost = Double.MAX_VALUE;
+        int bestStartIndex = -1;
+
+        // Use sliding window to find minimum cost interval
+        for (int i = 0; i <= prices.length - timeSteps; i++) {
+            double intervalCost = 0;
+            for (int j = i; j < i + timeSteps; j++) {
+                intervalCost += prices[j];
+            }
+
+            if (intervalCost < minCost) {
+                minCost = intervalCost;
+                bestStartIndex = i;
+            }
+        }
+
+        double[] result = new double[prices.length];
+        for (int i = bestStartIndex; i < bestStartIndex + timeSteps; i++) {
+            result[i] = 1d;
+        }
+        return result;
+    }
+}

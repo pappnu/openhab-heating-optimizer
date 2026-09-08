@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Set current date as env variable
+        run: echo "NOW=$(date -u +'%Y-%m-%d %H:%M:%S') UTC" >> "$GITHUB_ENV"
+
+      - name: Set current path friendly date as env variable
+        run: echo "NOW_PATH=$(date -u +'%Y-%m-%dT%H%M%SZ')" >> "$GITHUB_ENV"
+
+      - name: Set commit short SHA as env variable
+        run: echo "SHORT_SHA=${GITHUB_SHA:0:7}" >> "$GITHUB_ENV"
+
+      - name: Set openHAB target as env variable
+        run: echo "OPENHAB_TARGET=$(mvn help:evaluate -Dexpression=project.parent.version -q -DforceStdout)" >> "$GITHUB_ENV"
+
+      - name: Set Maven artifact name as env variable
+        run: echo "MAVEN_ARTIFACT=$(mvn help:evaluate -Dexpression=project.build.finalName -q -DforceStdout)" >> "$GITHUB_ENV"
+
+      - name: Apply code style
+        run: mvn spotless:apply
+
+      - name: Compile release
+        run: mvn clean install
+
+      - name: Set release JAR name as env variable
+        run: echo "JAR_NAME=openhab.heating.optimizer-${OPENHAB_TARGET}.jar" >> "$GITHUB_ENV"
+
+      - name: Rename release JAR
+        run: cp "target/${MAVEN_ARTIFACT}.jar" "${JAR_NAME}"
+
+      - name: Create release tag
+        run: |
+          git tag -f "${NOW_PATH}"
+          git push origin "${NOW_PATH}"
+
+      - name: Release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: "${{ env.NOW }} ${{ env.SHORT_SHA }}"
+          files: ${{ env.JAR_NAME }}
+          tag_name: ${{ env.NOW_PATH }}
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+
+      - name: Delete old releases
+        run: gh release list --json tagName --jq '.[] | .tagName' | tail -n+7 | xargs -r -n 1 gh release delete --yes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
