@@ -3,7 +3,7 @@ package openhab.heating.optimizer.internal;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 @NonNullByDefault
 public class ContinuousPeriodOptimizerActionHandlerTest {

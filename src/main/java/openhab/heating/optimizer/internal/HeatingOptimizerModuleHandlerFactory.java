@@ -31,10 +31,6 @@ public class HeatingOptimizerModuleHandlerFactory extends BaseModuleHandlerFacto
     @Reference
     private @NonNullByDefault({}) ItemRegistry itemRegistry;
 
-    // @Reference
-    // private @NonNullByDefault({}) ScheduledExecutorService scheduler;
-
-    // TODO is this how it is actually done?
     private final ScheduledExecutorService scheduler = ThreadPoolManager
             .getScheduledPool(HeatingOptimizerModuleHandlerFactory.class.getName());
 
@@ -59,7 +55,7 @@ public class HeatingOptimizerModuleHandlerFactory extends BaseModuleHandlerFacto
                 moduleHandler = new HeatingOptimizerActionHandler((Action) module, itemRegistry, scheduler);
                 break;
             case ContinuousPeriodOptimizerActionType.UID:
-                moduleHandler = new ContinuousPeriodOptimizerActionHandler((Action) module, itemRegistry);
+                moduleHandler = new ContinuousPeriodOptimizerActionHandler((Action) module, itemRegistry, scheduler);
                 break;
 
             default:

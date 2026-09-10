@@ -2,9 +2,9 @@ package openhab.heating.optimizer.internal;
 
 import java.time.Duration;
 import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.StreamSupport;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
@@ -12,6 +12,7 @@ import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.core.automation.Action;
 import org.openhab.core.automation.handler.ActionHandler;
 import org.openhab.core.automation.handler.BaseModuleHandler;
+import org.openhab.core.items.Item;
 import org.openhab.core.items.ItemRegistry;
 import org.openhab.core.persistence.HistoricItem;
 import org.openhab.core.persistence.extensions.PersistenceExtensions;
@@ -25,25 +26,34 @@ import openhab.heating.utils.Transform;
 @NonNullByDefault
 public class ContinuousPeriodOptimizerActionHandler extends BaseModuleHandler<Action> implements ActionHandler {
     private final ItemRegistry itemRegistry;
+    private final ScheduledExecutorService scheduler;
     private final Logger logger = LoggerFactory.getLogger(ContinuousPeriodOptimizerActionHandler.class);
 
-    public ContinuousPeriodOptimizerActionHandler(Action module, ItemRegistry itemRegistry) {
+    public ContinuousPeriodOptimizerActionHandler(Action module, ItemRegistry itemRegistry,
+            ScheduledExecutorService scheduler) {
         super(module);
         this.itemRegistry = itemRegistry;
+        this.scheduler = scheduler;
     }
 
     @Override
     public @Nullable Map<String, @Nullable Object> execute(Map<String, Object> context) {
+        var conf = module.getConfiguration().as(ContinuousPeriodOptimizerConfig.class);
+        var spotPricesItem = Items.getItem(itemRegistry, conf.spotPricesItem);
+
+        Items.waitForTomorrowPersistence(spotPricesItem, scheduler,
+                (result) -> optimize(conf, spotPricesItem, result.now(), result.today(), result.tomorrow()));
+
+        return null;
+    }
+
+    private void optimize(ContinuousPeriodOptimizerConfig conf, Item spotPricesItem, ZonedDateTime now,
+            ZonedDateTime today, ZonedDateTime tomorrow) {
         try {
-            var conf = module.getConfiguration().as(ContinuousPeriodOptimizerConfig.class);
-
-            var spotPricesItem = Items.getItem(itemRegistry, conf.spotPricesItem);
-            var controlItem = Items.getItem(itemRegistry, conf.controlItem);
-
-            var now = ZonedDateTime.now();
-            var today = now.truncatedTo(ChronoUnit.DAYS);
             var dayAfterTomorrow = today.plusDays(2);
             var optStart = TimeUtils.truncateToNextQuarterHour(now);
+
+            var controlItem = Items.getItem(itemRegistry, conf.controlItem);
 
             // Get spot prices spanning multiple days
             var pricesIter = PersistenceExtensions.getAllStatesBetween(spotPricesItem, optStart,
@@ -71,7 +81,7 @@ public class ContinuousPeriodOptimizerActionHandler extends BaseModuleHandler<Ac
             prices = Transform.makePricesQuarterly(prices, timeStep);
 
             int periodLength = TimeUtils.convertHoursToTimeSteps(conf.periodLength, timeStep);
-            int firstDaySteps = TimeUtils.convertToTimeSteps(Duration.between(optStart, today), timeStep);
+            int firstDaySteps = TimeUtils.convertToTimeSteps(Duration.between(optStart, tomorrow), timeStep);
 
             // Find cheapest interval for today
             if (firstDaySteps > 0) {
@@ -89,7 +99,6 @@ public class ContinuousPeriodOptimizerActionHandler extends BaseModuleHandler<Ac
             logger.error("Failed to find optimal continuous heating period", e);
             throw e;
         }
-        return null;
     }
 
     /**

@@ -32,9 +32,6 @@ jobs:
       - name: Set commit short SHA as env variable
         run: echo "SHORT_SHA=${GITHUB_SHA:0:7}" >> "$GITHUB_ENV"
 
-      - name: Set openHAB target as env variable
-        run: echo "OPENHAB_TARGET=$(mvn help:evaluate -Dexpression=project.parent.version -q -DforceStdout)" >> "$GITHUB_ENV"
-
       - name: Set Maven artifact name as env variable
         run: echo "MAVEN_ARTIFACT=$(mvn help:evaluate -Dexpression=project.build.finalName -q -DforceStdout)" >> "$GITHUB_ENV"
 
@@ -45,7 +42,7 @@ jobs:
         run: mvn clean install
 
       - name: Set release JAR name as env variable
-        run: echo "JAR_NAME=openhab.heating.optimizer-${OPENHAB_TARGET}.jar" >> "$GITHUB_ENV"
+        run: echo "JAR_NAME=openhab-heating-optimizer-${NOW_PATH}-${SHORT_SHA}.jar" >> "$GITHUB_ENV"
 
       - name: Rename release JAR
         run: cp "target/${MAVEN_ARTIFACT}.jar" "${JAR_NAME}"

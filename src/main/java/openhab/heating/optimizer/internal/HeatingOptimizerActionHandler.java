@@ -2,11 +2,9 @@ package openhab.heating.optimizer.internal;
 
 import java.time.Duration;
 import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.StreamSupport;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
@@ -37,11 +35,6 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
     private final ItemRegistry itemRegistry;
     private final ScheduledExecutorService scheduler;
     private final Logger logger = LoggerFactory.getLogger(HeatingOptimizerActionHandler.class);
-    private static final int MAX_ATTEMPTS = 4;
-    /**
-     * In seconds
-     */
-    private static final int ATTEMPT_DELAY = 5;
 
     public HeatingOptimizerActionHandler(Action module, ItemRegistry itemRegistry, ScheduledExecutorService scheduler) {
         super(module);
@@ -56,31 +49,10 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
         var conf = module.getConfiguration().as(HeatingOptimizerConfig.class);
         var spotPricesItem = Items.getItem(itemRegistry, conf.spotPricesItem);
 
-        waitForPersistence(conf, spotPricesItem, 1);
+        Items.waitForTomorrowPersistence(spotPricesItem, scheduler,
+                (result) -> optimize(conf, spotPricesItem, result.now(), result.today(), result.tomorrow()));
 
         return null;
-    }
-
-    private void waitForPersistence(HeatingOptimizerConfig conf, Item spotPricesItem, int attempt) {
-        if (attempt > MAX_ATTEMPTS) {
-            logger.error("Failed to optimize heating since there are no spot prices available");
-            return;
-        }
-
-        var now = ZonedDateTime.now();
-        var today = now.truncatedTo(ChronoUnit.DAYS);
-        var tomorrow = today.plusDays(1);
-
-        var lastPriceTimeStamp = PersistenceExtensions.lastUpdate(spotPricesItem);
-
-        // Keep waiting for prices
-        if (lastPriceTimeStamp == null || (!lastPriceTimeStamp.isAfter(tomorrow) && attempt < MAX_ATTEMPTS)) {
-            scheduler.schedule(() -> waitForPersistence(conf, spotPricesItem, attempt + 1), ATTEMPT_DELAY,
-                    TimeUnit.SECONDS);
-            return;
-        }
-
-        optimize(conf, spotPricesItem, now, today, tomorrow);
     }
 
     private void optimize(HeatingOptimizerConfig conf, Item spotPricesItem, ZonedDateTime now, ZonedDateTime today,

@@ -3,7 +3,7 @@ package openhab.heating.utils;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 @NonNullByDefault
 public class MathUtilsTest {

@@ -2,6 +2,10 @@ package openhab.heating.utils;
 
 import java.time.Duration;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.StreamSupport;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
@@ -13,9 +17,18 @@ import org.openhab.core.persistence.HistoricItem;
 import org.openhab.core.persistence.extensions.PersistenceExtensions;
 import org.openhab.core.types.State;
 import org.openhab.core.types.TimeSeries;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @NonNullByDefault
 public class Items {
+    private final static Logger logger = LoggerFactory.getLogger(Items.class);
+    private static final int MAX_ATTEMPTS = 4;
+    /**
+     * In seconds
+     */
+    private static final int ATTEMPT_DELAY = 5;
+
     public static Item getItem(ItemRegistry registry, String id) {
         var item = registry.get(id);
         if (item == null) {
@@ -84,5 +97,36 @@ public class Items {
             timeSeries.add(startTime.plus(timeStep.multipliedBy(i)).toInstant(), new DecimalType(points[i]));
         }
         PersistenceExtensions.persist(item, timeSeries, persistenceServiceId);
+    }
+
+    public record TomorrowPersistenceWaitResult(ZonedDateTime now, ZonedDateTime today, ZonedDateTime tomorrow) {
+    }
+
+    private static void waitForTomorrowPersistence(Item item, ScheduledExecutorService scheduler,
+            Consumer<TomorrowPersistenceWaitResult> whenReady, int attempt, int maxAttempts, int attemptDelay) {
+        if (attempt > MAX_ATTEMPTS) {
+            logger.error("Failed to optimize heating since there are no spot prices available");
+            return;
+        }
+
+        var now = ZonedDateTime.now();
+        var today = now.truncatedTo(ChronoUnit.DAYS);
+        var tomorrow = today.plusDays(1);
+
+        var lastPriceTimeStamp = PersistenceExtensions.lastUpdate(item);
+
+        // Keep waiting for prices
+        if (lastPriceTimeStamp == null || (!lastPriceTimeStamp.isAfter(tomorrow) && attempt < MAX_ATTEMPTS)) {
+            scheduler.schedule(() -> waitForTomorrowPersistence(item, scheduler, whenReady, attempt + 1, maxAttempts,
+                    attemptDelay), ATTEMPT_DELAY, TimeUnit.SECONDS);
+            return;
+        }
+
+        whenReady.accept(new TomorrowPersistenceWaitResult(now, today, tomorrow));
+    }
+
+    public static void waitForTomorrowPersistence(Item item, ScheduledExecutorService scheduler,
+            Consumer<TomorrowPersistenceWaitResult> whenReady) {
+        waitForTomorrowPersistence(item, scheduler, whenReady, 1, MAX_ATTEMPTS, ATTEMPT_DELAY);
     }
 }
