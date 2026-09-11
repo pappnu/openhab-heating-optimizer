@@ -87,6 +87,8 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
                     Arrays.stream(priceItems).mapToDouble(item -> Items.getStateDouble(item.getState())).toArray(),
                     timeStep);
 
+            timeStep = Duration.ofMinutes(15);
+
             // TODO ensure that we have air temp forecasts for the duration of spotPrices
             // e.g. try getting average value from the last spot price interval?
             var avgAirTempFirstPeriod = Items
