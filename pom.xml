@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.openhab.addons.bundles</groupId>
+    <artifactId>org.openhab.addons.reactor.bundles</artifactId>
+    <version>5.2.1</version>
+  </parent>
+
+  <artifactId>openhab-heating-optimizer</artifactId>
+  <version>1.0.0</version>
+
+  <name>openhab-heating-optimizer</name>
+  <url>https://github.com/pappnu/openhab-heating-optimizer</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <basedirRoot>${project.basedir}</basedirRoot>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.google.ortools</groupId>
+      <artifactId>ortools-java</artifactId>
+      <version>[9.15.6755,10.0.0)</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.ortools</groupId>
+      <artifactId>ortools-linux-x86-64</artifactId>
+      <!-- Use the same version as ortools-java -->
+      <version>[9.15.6755,10.0.0)</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.ortools</groupId>
+      <artifactId>ortools-linux-aarch64</artifactId>
+      <!-- Use the same version as ortools-java -->
+      <version>[9.15.6755,10.0.0)</version>
+      <scope>compile</scope>
+    </dependency>
+
+    <!-- Required by OR-Tools -->
+    <dependency>
+      <groupId>net.java.dev.jna</groupId>
+      <artifactId>jna</artifactId>
+      <version>[5.19.1,6.0.0)</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+      <version>[4.36.0,5.0.0)</version>
+      <scope>compile</scope>
+    </dependency>
+    <!-- Required by OR-Tools -->
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>[6.1.3,7.0.0)</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <repositories>
+    <repository>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <id>openhab-release</id>
+      <url>https://openhab.jfrog.io/artifactory/libs-release</url>
+    </repository>
+    <repository>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+      <id>openhab-snapshot</id>
+      <url>https://openhab.jfrog.io/artifactory/libs-snapshot</url>
+    </repository>
+  </repositories>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.openhab.tools.sat</groupId>
+        <artifactId>sat-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>sat-all</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Disable parent's directory lookup in order to allow standalone build -->
+      <plugin>
+        <groupId>org.commonjava.maven.plugins</groupId>
+        <artifactId>directory-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>directories</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
