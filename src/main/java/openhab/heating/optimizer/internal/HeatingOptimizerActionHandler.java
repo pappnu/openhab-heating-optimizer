@@ -85,7 +85,7 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
             // Adjust price points to 15 minute frequency
             double[] prices = Transform.makePricesQuarterly(
                     Arrays.stream(priceItems).mapToDouble(item -> Items.getStateDouble(item.getState())).toArray(),
-                    timeStep);
+                    timeStep, 4 - optStart.getMinute() / 15);
 
             timeStep = Duration.ofMinutes(15);
 
