@@ -80,7 +80,7 @@ public class ContinuousPeriodOptimizerActionHandler extends BaseModuleHandler<Ac
                     .toArray();
 
             // Adjust price points to 15 minute frequency
-            prices = Transform.makePricesQuarterly(prices, timeStep);
+            prices = Transform.makePricesQuarterly(prices, timeStep, 4 - optStart.getMinute() / 15);
 
             int periodLength = TimeUtils.convertHoursToTimeSteps(conf.periodLength, timeStep);
             int firstDaySteps = TimeUtils.convertToTimeSteps(Duration.between(optStart, tomorrow), timeStep);
