@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.StreamSupport;
 
@@ -35,6 +36,7 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
     private final ItemRegistry itemRegistry;
     private final ScheduledExecutorService scheduler;
     private final Logger logger = LoggerFactory.getLogger(HeatingOptimizerActionHandler.class);
+    private UUID uid = UUID.randomUUID();
 
     public HeatingOptimizerActionHandler(Action module, ItemRegistry itemRegistry, ScheduledExecutorService scheduler) {
         super(module);
@@ -44,7 +46,7 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
 
     @Override
     public @Nullable Map<String, @Nullable Object> execute(Map<String, Object> context) {
-        logger.info("Scheduling heating optimization");
+        logger.info("Scheduling heating optimization: " + uid);
 
         var conf = module.getConfiguration().as(HeatingOptimizerConfig.class);
         var spotPricesItem = Items.getItem(itemRegistry, conf.spotPricesItem);
@@ -65,15 +67,15 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
 
             var optStart = TimeUtils.truncateToNextQuarterHour(now);
 
-            var pricesIter = PersistenceExtensions.getAllStatesBetween(spotPricesItem, optStart,
+            var pricesIter = Items.getAllStatesBetweenIncludingStartState(spotPricesItem, optStart,
                     today.plusDays(2).minusSeconds(1), conf.persistenceServiceId);
             if (pricesIter == null) {
-                throw new IllegalStateException("Spot prices iterator is null");
+                throw new IllegalStateException("Spot prices iterator is null: " + uid);
             }
             HistoricItem[] priceItems = StreamSupport.stream(pricesIter.spliterator(), false)
                     .toArray(HistoricItem[]::new);
             if (priceItems.length < 2) {
-                throw new IllegalStateException("Not enough spot prices for optimization");
+                throw new IllegalStateException("Not enough spot prices for optimization: " + uid);
             }
             var secondToLastPrice = priceItems[priceItems.length - 2];
             var lastPrice = priceItems[priceItems.length - 1];
@@ -85,7 +87,7 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
             // Adjust price points to 15 minute frequency
             double[] prices = Transform.makePricesQuarterly(
                     Arrays.stream(priceItems).mapToDouble(item -> Items.getStateDouble(item.getState())).toArray(),
-                    timeStep, 4 - optStart.getMinute() / 15);
+                    timeStep, optStart);
 
             timeStep = Duration.ofMinutes(15);
 
@@ -197,13 +199,13 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
                         timeStep, conf.persistenceServiceId);
 
                 var endTime = System.nanoTime();
-                logger.info(String.format("Optimized heating in %.3f seconds",
+                logger.info(String.format("Optimized heating in %.3f seconds: " + uid,
                         Duration.ofNanos(endTime - startTime).toNanos() / 1000000000d));
             } else {
-                logger.error("Optimization didn't end with a usable result " + result.status());
+                logger.error("Optimization didn't end with a usable result: " + result.status() + " " + uid);
             }
         } catch (Exception e) {
-            logger.error("Failed to optimize heating", e);
+            logger.error("Failed to optimize heating: " + uid, e);
             throw e;
         }
     }

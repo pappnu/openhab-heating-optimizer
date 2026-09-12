@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.StreamSupport;
 
@@ -28,6 +29,7 @@ public class ContinuousPeriodOptimizerActionHandler extends BaseModuleHandler<Ac
     private final ItemRegistry itemRegistry;
     private final ScheduledExecutorService scheduler;
     private final Logger logger = LoggerFactory.getLogger(ContinuousPeriodOptimizerActionHandler.class);
+    private UUID uid = UUID.randomUUID();
 
     public ContinuousPeriodOptimizerActionHandler(Action module, ItemRegistry itemRegistry,
             ScheduledExecutorService scheduler) {
@@ -38,7 +40,7 @@ public class ContinuousPeriodOptimizerActionHandler extends BaseModuleHandler<Ac
 
     @Override
     public @Nullable Map<String, @Nullable Object> execute(Map<String, Object> context) {
-        logger.info("Scheduling continuous period optimization");
+        logger.info("Scheduling continuous period optimization: " + uid);
 
         var conf = module.getConfiguration().as(ContinuousPeriodOptimizerConfig.class);
         var spotPricesItem = Items.getItem(itemRegistry, conf.spotPricesItem);
@@ -58,15 +60,15 @@ public class ContinuousPeriodOptimizerActionHandler extends BaseModuleHandler<Ac
             var controlItem = Items.getItem(itemRegistry, conf.controlItem);
 
             // Get spot prices spanning multiple days
-            var pricesIter = PersistenceExtensions.getAllStatesBetween(spotPricesItem, optStart,
-                    dayAfterTomorrow.minusSeconds(1), conf.persistenceServiceId);
+            var pricesIter = Items.getAllStatesBetweenIncludingStartState(spotPricesItem, optStart, dayAfterTomorrow,
+                    conf.persistenceServiceId);
             if (pricesIter == null) {
-                throw new IllegalArgumentException("Spot prices iterator is null");
+                throw new IllegalArgumentException("Spot prices iterator is null: " + uid);
             }
             HistoricItem[] priceItems = StreamSupport.stream(pricesIter.spliterator(), false)
                     .toArray(HistoricItem[]::new);
             if (priceItems.length < 2) {
-                throw new IllegalArgumentException("Not enough spot prices for continuous period optimization");
+                throw new IllegalArgumentException("Not enough spot prices for continuous period optimization: " + uid);
             }
 
             var secondToLastPrice = priceItems[priceItems.length - 2];
@@ -80,7 +82,7 @@ public class ContinuousPeriodOptimizerActionHandler extends BaseModuleHandler<Ac
                     .toArray();
 
             // Adjust price points to 15 minute frequency
-            prices = Transform.makePricesQuarterly(prices, timeStep, 4 - optStart.getMinute() / 15);
+            prices = Transform.makePricesQuarterly(prices, timeStep, optStart);
 
             timeStep = Duration.ofMinutes(15);
 
@@ -89,18 +91,27 @@ public class ContinuousPeriodOptimizerActionHandler extends BaseModuleHandler<Ac
 
             // Find cheapest period for today
             if (firstDaySteps > 0) {
-                var firstDayResult = findCheapestPeriod(Arrays.copyOf(prices, firstDaySteps), periodLength);
+                var realizedHeatingState = PersistenceExtensions.sumBetween(controlItem, today, optStart,
+                        conf.persistenceServiceId);
+                int periodLengthDuringFirstDay = realizedHeatingState != null
+                        ? Math.max(0, periodLength - Items.getStateInt(realizedHeatingState))
+                        : periodLength;
+                var firstDayResult = findCheapestPeriod(Arrays.copyOf(prices, firstDaySteps),
+                        periodLengthDuringFirstDay);
                 Items.persistControlPoints(controlItem, firstDayResult, optStart, timeStep, conf.persistenceServiceId);
             }
 
             // Find cheapest period for tomorrow
-            var secondDayResult = findCheapestPeriod(
-                    Arrays.copyOfRange(prices, Math.max(0, firstDaySteps - 1), prices.length), periodLength);
-            Items.persistControlPoints(controlItem, secondDayResult, today.plusDays(1), timeStep,
-                    conf.persistenceServiceId);
+            if (firstDaySteps < prices.length) {
+                var secondDayResult = findCheapestPeriod(
+                        Arrays.copyOfRange(prices, Math.max(0, firstDaySteps), prices.length), periodLength);
+                Items.persistControlPoints(controlItem, secondDayResult, today.plusDays(1), timeStep,
+                        conf.persistenceServiceId);
+            }
 
+            logger.info("Continuous period optimization done: " + uid);
         } catch (Exception e) {
-            logger.error("Failed to find optimal continuous heating period", e);
+            logger.error("Failed to find optimal continuous heating period: " + uid, e);
             throw e;
         }
     }
@@ -140,9 +151,7 @@ public class ContinuousPeriodOptimizerActionHandler extends BaseModuleHandler<Ac
         }
 
         double[] result = new double[prices.length];
-        for (int i = bestStartIndex; i < bestStartIndex + timeSteps; i++) {
-            result[i] = 1d;
-        }
+        Arrays.fill(result, bestStartIndex, bestStartIndex + timeSteps, 1d);
         return result;
     }
 }

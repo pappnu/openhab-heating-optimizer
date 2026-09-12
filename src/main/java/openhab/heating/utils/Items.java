@@ -3,9 +3,11 @@ package openhab.heating.utils;
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
@@ -58,6 +60,34 @@ public class Items {
 
     public static int getStateInt(@Nullable State state) {
         return getStateDecimal(state).intValue();
+    }
+
+    public static @Nullable ArrayList<HistoricItem> getAllStatesBetweenIncludingStartState(Item item,
+            ZonedDateTime start, ZonedDateTime end, String serviceId) {
+        var statesBetween = PersistenceExtensions.getAllStatesBetween(item, start, end, serviceId);
+        if (statesBetween == null) {
+            return null;
+        }
+
+        ArrayList<HistoricItem> states = StreamSupport.stream(statesBetween.spliterator(), false)
+                .collect(Collectors.toCollection(ArrayList::new));
+        if (states.size() < 1) {
+            var stateAtStart = PersistenceExtensions.persistedState(item, start, serviceId);
+            if (stateAtStart != null) {
+                states.clear();
+                states.add(stateAtStart);
+            }
+            return states;
+        }
+
+        if (states.get(1).getTimestamp().isAfter(start)) {
+            var stateAtStart = PersistenceExtensions.persistedState(item, start, serviceId);
+            if (stateAtStart != null) {
+                states.add(0, stateAtStart);
+            }
+        }
+
+        return states;
     }
 
     /**
