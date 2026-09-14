@@ -80,7 +80,7 @@ public class Items {
             return states;
         }
 
-        if (states.get(1).getTimestamp().isAfter(start)) {
+        if (states.get(0).getTimestamp().isAfter(start)) {
             var stateAtStart = PersistenceExtensions.persistedState(item, start, serviceId);
             if (stateAtStart != null) {
                 states.add(0, stateAtStart);

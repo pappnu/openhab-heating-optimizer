@@ -39,8 +39,8 @@ public class ContinuousPeriodOptimizerActionType extends ActionType {
                 .create(CONFIG_PERIOD_LENGTH_HOURS, Type.DECIMAL).withRequired(true)
                 .withLabel("Length of the period to search for in hours").build();
         final ConfigDescriptionParameter controlItem = ConfigDescriptionParameterBuilder
-                .create(CONFIG_CONTROL_ITEM, Type.TEXT).withRequired(true).withContext("item")
-                .withLabel("Result item").build();
+                .create(CONFIG_CONTROL_ITEM, Type.TEXT).withRequired(true).withContext("item").withLabel("Result item")
+                .build();
 
         List<ConfigDescriptionParameter> config = new ArrayList<ConfigDescriptionParameter>();
         Collections.addAll(config, persistenceServiceId, spotPrices, periodLength, controlItem);
