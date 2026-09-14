@@ -31,16 +31,16 @@ public class ContinuousPeriodOptimizerActionType extends ActionType {
     public static ActionType initialize() {
         final ConfigDescriptionParameter persistenceServiceId = ConfigDescriptionParameterBuilder
                 .create(CONFIG_PERSISTENCE_SERVICE_ID, Type.TEXT).withRequired(true).withContext("persistence")
-                .withLabel("ID of persistence service to use").build();
+                .withLabel("Persistence service").build();
         final ConfigDescriptionParameter spotPrices = ConfigDescriptionParameterBuilder
                 .create(CONFIG_SPOT_PRICES, Type.TEXT).withRequired(true).withContext("item")
-                .withLabel("Spot prices item name").build();
+                .withLabel("Spot prices item").build();
         final ConfigDescriptionParameter periodLength = ConfigDescriptionParameterBuilder
                 .create(CONFIG_PERIOD_LENGTH_HOURS, Type.DECIMAL).withRequired(true)
                 .withLabel("Length of the period to search for in hours").build();
         final ConfigDescriptionParameter controlItem = ConfigDescriptionParameterBuilder
                 .create(CONFIG_CONTROL_ITEM, Type.TEXT).withRequired(true).withContext("item")
-                .withLabel("The item to store DHW heating control signal in").build();
+                .withLabel("Result item").build();
 
         List<ConfigDescriptionParameter> config = new ArrayList<ConfigDescriptionParameter>();
         Collections.addAll(config, persistenceServiceId, spotPrices, periodLength, controlItem);

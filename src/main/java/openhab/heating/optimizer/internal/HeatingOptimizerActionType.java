@@ -38,13 +38,13 @@ public class HeatingOptimizerActionType extends ActionType {
     public static ActionType initialize() {
         final ConfigDescriptionParameter persistenceServiceId = ConfigDescriptionParameterBuilder
                 .create(CONFIG_PERSISTENCE_SERVICE_ID, Type.TEXT).withRequired(true).withContext("persistence")
-                .withLabel("ID of persistence service to use").build();
+                .withLabel("Persistence service").build();
         final ConfigDescriptionParameter spotPrices = ConfigDescriptionParameterBuilder
                 .create(CONFIG_SPOT_PRICES, Type.TEXT).withRequired(true).withContext("item")
-                .withLabel("Spot prices item name").build();
+                .withLabel("Spot prices item").build();
         final ConfigDescriptionParameter airTemperatures = ConfigDescriptionParameterBuilder
                 .create(CONFIG_AIR_TEMPERATURES, Type.TEXT).withRequired(true).withContext("item")
-                .withLabel("Air temperatures item name").build();
+                .withLabel("Air temperatures item").build();
         final ConfigDescriptionParameter heatingTemperatures = ConfigDescriptionParameterBuilder
                 .create(CONFIG_HEATING_TEMPERATURES, Type.TEXT).withRequired(true)
                 .withLabel("Ascending average temperature levels for heating needs, e.g. '-20.0,0.5,15'.").build();
@@ -74,7 +74,7 @@ public class HeatingOptimizerActionType extends ActionType {
                 .withLabel("Maximum time to use for solving the linear programming problem in seconds").build();
         final ConfigDescriptionParameter heatingControlItem = ConfigDescriptionParameterBuilder
                 .create(CONFIG_HEATING_CONTROL_OUTPUT_ITEM, Type.TEXT).withRequired(true).withContext("item")
-                .withLabel("The item to store heating periods in").build();
+                .withLabel("Result item").build();
 
         List<ConfigDescriptionParameter> config = new ArrayList<ConfigDescriptionParameter>();
         Collections.addAll(config, persistenceServiceId, spotPrices, airTemperatures, heatingTemperatures, heatingNeeds,
