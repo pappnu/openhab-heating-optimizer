@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import com.google.ortools.linearsolver.MPConstraint;
 import com.google.ortools.linearsolver.MPObjective;
 import com.google.ortools.linearsolver.MPSolver;
+import com.google.ortools.linearsolver.MPSolver.ResultStatus;
 import com.google.ortools.linearsolver.MPVariable;
 
 import openhab.heating.utils.Items;
@@ -343,6 +344,88 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
         // Solve
         solver.setTimeLimit(solvingTimeLimit);
         MPSolver.ResultStatus resultStatus = solver.solve();
+
+        if (resultStatus == ResultStatus.OPTIMAL) {
+            double[] heatingHint = Arrays.stream(heating).mapToDouble(entry -> entry.solutionValue()).toArray();
+            double[] heatingStartHint = Arrays.stream(heatingStart).mapToDouble(entry -> entry.solutionValue())
+                    .toArray();
+
+            // Ensure that the secondary optimization doesn't increase price
+            MPConstraint priceConstraint = solver.makeConstraint(-MPSolver.infinity(), objective.value(),
+                    "OptimalPrice");
+            for (int t = 0; t < n; t++) {
+                priceConstraint.setCoefficient(heating[t], prices[t]);
+            }
+
+            // Secondarily minimize starts
+            objective.clear();
+            for (var variable : heatingStart) {
+                objective.setCoefficient(variable, 1);
+            }
+            objective.setMinimization();
+
+            solver.setHint(heating, heatingHint);
+            solver.setHint(heatingStart, heatingStartHint);
+            resultStatus = solver.solve();
+
+            if (resultStatus == ResultStatus.OPTIMAL) {
+                heatingHint = Arrays.stream(heating).mapToDouble(entry -> entry.solutionValue()).toArray();
+                heatingStartHint = Arrays.stream(heatingStart).mapToDouble(entry -> entry.solutionValue()).toArray();
+
+                // Ensure that tertiary optimization doesn't increase starts
+                MPConstraint optimalStartsConstraint = solver.makeConstraint(-MPSolver.infinity(), objective.value(),
+                        "OptimalStartsConstraint");
+                for (var variable : heatingStart) {
+                    optimalStartsConstraint.setCoefficient(variable, 1);
+                }
+
+                // region Longest Gap
+
+                MPVariable[] heatingGap = new MPVariable[n];
+                for (int t = 0; t < n; t++) {
+                    heatingGap[t] = solver.makeIntVar(0, n, "gap_" + t);
+                }
+                MPVariable maximumGap = solver.makeIntVar(0, n, "maximumGap");
+
+                MPConstraint initialGapBounds = solver.makeConstraint(1, 1, "InitialGapBounds");
+                initialGapBounds.setCoefficient(heatingGap[0], 1);
+                initialGapBounds.setCoefficient(heating[0], 1);
+                for (int t = 1; t < n; t++) {
+                    // Each heatingGap variable can be at max 1 bigger than the previous
+                    MPConstraint gapUpperBound = solver.makeConstraint(-n, 1, "GapUpperBound_" + t);
+                    gapUpperBound.setCoefficient(heatingGap[t], 1);
+                    gapUpperBound.setCoefficient(heatingGap[t - 1], -1);
+
+                    // During a gap subsequent variables must have bigger values
+                    MPConstraint gapLowerBound = solver.makeConstraint(1, n, "GapLowerBound_" + t);
+                    gapLowerBound.setCoefficient(heatingGap[t], 1);
+                    gapLowerBound.setCoefficient(heatingGap[t - 1], -1);
+                    gapLowerBound.setCoefficient(heating[t], n);
+
+                    // There can be no gap when heating is active
+                    MPConstraint gapWhenHeating = solver.makeConstraint(1, n, "GapWhenHeating_" + t);
+                    gapWhenHeating.setCoefficient(heatingGap[t], 1);
+                    gapWhenHeating.setCoefficient(heating[t], n);
+                }
+                // heatingGap[t] - maximumGap >= 0
+                for (int t = 0; t < n; t++) {
+                    MPConstraint maximumGapBound = solver.makeConstraint(0, n, "MaximumGapBound_" + t);
+                    maximumGapBound.setCoefficient(maximumGap, 1);
+                    maximumGapBound.setCoefficient(heatingGap[t], -1);
+                }
+
+                // endregion Longest Gap
+
+                // Tertiarly minimize longest heating gap
+                objective.clear();
+                objective.setCoefficient(maximumGap, 1);
+                objective.setMinimization();
+
+                solver.setHint(heating, heatingHint);
+                solver.setHint(heatingStart, heatingStartHint);
+                resultStatus = solver.solve();
+            }
+        }
 
         return new OptimizationResult(resultStatus, objective, heating);
     }

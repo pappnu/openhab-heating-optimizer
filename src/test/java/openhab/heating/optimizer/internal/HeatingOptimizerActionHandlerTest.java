@@ -21,7 +21,7 @@ public class HeatingOptimizerActionHandlerTest {
         double[] prices = { 2, 10, 10, 10, 1, -1 };
         var heating = testSuccessfulHeatingOptimization(prices, 3, prices.length, prices.length, -1, -1, 2,
                 prices.length, prices.length, 3, true);
-        assertArrayEquals(new double[] { 1, 0, 0, 0, 1, 1 }, heating);
+        assertArrayEquals(new double[] { 1, 0, 0, 0, 1, 1 }, heating, 0.000001);
     }
 
     @Test
@@ -29,7 +29,7 @@ public class HeatingOptimizerActionHandlerTest {
         double[] prices = { 2, 10, 10, 10, 1, -1 };
         var heating = testSuccessfulHeatingOptimization(prices, 3, prices.length, prices.length, -1, -1, 2,
                 prices.length, prices.length, 3, false);
-        assertArrayEquals(new double[] { 0, 0, 0, 1, 1, 1 }, heating);
+        assertArrayEquals(new double[] { 0, 0, 0, 1, 1, 1 }, heating, 0.000001);
     }
 
     @Test
@@ -37,7 +37,7 @@ public class HeatingOptimizerActionHandlerTest {
         double[] prices = { -1, 10, 10, 10, 10, -2, -2, -2 };
         var heating = testSuccessfulHeatingOptimization(prices, 4, prices.length, prices.length, -1, -1, 3,
                 prices.length, 4, 2, false);
-        assertArrayEquals(new double[] { 1, 1, 1, 0, 0, 1, 1, 1 }, heating);
+        assertArrayEquals(new double[] { 1, 1, 1, 0, 0, 1, 1, 1 }, heating, 0.000001);
     }
 
     @Test
@@ -45,8 +45,7 @@ public class HeatingOptimizerActionHandlerTest {
         double[] prices = { 1, 10, 2, 10 };
         var heating = testSuccessfulHeatingOptimization(prices, 2, prices.length, prices.length, 1, -1, 1,
                 prices.length, prices.length, 2, false);
-        System.out.println(Arrays.toString(heating));
-        assertArrayEquals(new double[] { 1, 1, 0, 0 }, heating);
+        assertArrayEquals(new double[] { 1, 1, 0, 0 }, heating, 0.000001);
     }
 
     @Test
@@ -54,8 +53,34 @@ public class HeatingOptimizerActionHandlerTest {
         double[] prices = { 1, 10, 2, 10, 10, 1, 9, 2, 10 };
         var heating = testSuccessfulHeatingOptimization(prices, 4, prices.length, prices.length, 1, 1, 1, prices.length,
                 4, 2, false);
-        System.out.println(Arrays.toString(heating));
-        assertArrayEquals(new double[] { 1, 1, 0, 0, 0, 1, 1, 0, 0 }, heating);
+        assertArrayEquals(new double[] { 1, 1, 0, 0, 0, 1, 1, 0, 0 }, heating, 0.000001);
+    }
+
+    @Test
+    public void testSecondaryObjectiveMinimizeStarts() {
+        double[] prices = { 1, 5, 1, 5, 1, 1, 1 };
+        var heating = testSuccessfulHeatingOptimization(prices, 3, prices.length, prices.length, -1, -1, 1,
+                prices.length, prices.length, 3, false);
+        assertArrayEquals(new double[] { 0, 0, 0, 0, 1, 1, 1 }, heating);
+    }
+
+    @Test
+    public void testTertiaryObjectiveMinimizesLargestHeatingGap() {
+        double[] prices = { 1, 1, 1, 1, 1, 1, 1, 1 };
+        var heating = testSuccessfulHeatingOptimization(prices, 4, prices.length, prices.length, -1, -1, 1,
+                prices.length, prices.length, 4, false);
+        assertArrayEquals(new double[] { 0, 0, 1, 1, 1, 1, 0, 0 }, heating, 0.000001);
+        // int largestGap = 0;
+        // int currentGap = 0;
+        // for (double variable : heating) {
+        // if (variable == 0) {
+        // currentGap++;
+        // largestGap = Math.max(largestGap, currentGap);
+        // } else {
+        // currentGap = 0;
+        // }
+        // }
+        // assertEquals(2, largestGap);
     }
 
     protected static double[] testSuccessfulHeatingOptimization(double[] prices, int totalHeatingNeed,
