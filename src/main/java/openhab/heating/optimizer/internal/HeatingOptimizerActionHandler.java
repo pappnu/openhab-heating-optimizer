@@ -195,9 +195,11 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
             var heating = result.heating();
             if ((result.status() == MPSolver.ResultStatus.OPTIMAL || result.status() == MPSolver.ResultStatus.FEASIBLE)
                     && heating != null) {
-                Items.persistControlPoints(heatingControlItem,
-                        Arrays.stream(heating).mapToDouble(entry -> entry.solutionValue()).toArray(), optStart,
-                        timeStep, conf.persistenceServiceId);
+                double[] heatingPoints = Arrays.stream(heating).mapToDouble(entry -> entry.solutionValue()).toArray();
+                applyHeatingBasedOnThresholds(heatingPoints, prices, conf.priceFloorSoft, conf.priceFloorHard,
+                        minHeatingPeriod);
+                Items.persistControlPoints(heatingControlItem, heatingPoints, optStart, timeStep,
+                        conf.persistenceServiceId);
 
                 var endTime = System.nanoTime();
                 logger.info(String.format("Optimized heating in %.3f seconds: " + uid,
@@ -440,5 +442,34 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
 
     public record OptimizationResult(MPSolver.ResultStatus status, @Nullable MPObjective objective,
             MPVariable @Nullable [] heating) {
+    }
+
+    protected static double[] applyHeatingBasedOnThresholds(double[] heating, double[] prices, double priceFloorSoft,
+            double priceFloorHard, int minPeriodLength) {
+        double avgPrice = Arrays.stream(prices).average().getAsDouble();
+
+        for (int i = 0; i < heating.length; i++) {
+            if (prices[i] < priceFloorHard || prices[i] < priceFloorSoft && prices[i] < avgPrice) {
+                heating[i] = 1;
+            }
+        }
+
+        int periodStart = 0;
+        while (periodStart < heating.length) {
+            if (heating[periodStart] == 0) {
+                periodStart++;
+                continue;
+            }
+
+            int periodEnd = periodStart;
+            while (periodEnd < heating.length && heating[periodEnd] == 1) {
+                periodEnd++;
+            }
+            if (periodEnd - periodStart < minPeriodLength) {
+                Arrays.fill(heating, periodStart, periodEnd, 0);
+            }
+            periodStart = periodEnd;
+        }
+        return heating;
     }
 }

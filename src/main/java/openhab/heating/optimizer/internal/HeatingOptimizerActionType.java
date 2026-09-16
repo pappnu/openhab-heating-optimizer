@@ -27,6 +27,8 @@ public class HeatingOptimizerActionType extends ActionType {
     public static final String CONFIG_MAX_STARTS = "maxStarts";
     public static final String CONFIG_MIN_CONTINUOUS_HEATING_PERIOD = "minHeatingPeriod";
     public static final String CONFIG_MAX_SOLVING_TIME = "maxSolvingTime";
+    public static final String CONFIG_PRICE_FLOOR_SOFT = "priceFloorSoft";
+    public static final String CONFIG_PRICE_FLOOR_HARD = "priceFloorHard";
     public static final String CONFIG_HEATING_CONTROL_OUTPUT_ITEM = "heatingControlItem";
 
     public HeatingOptimizerActionType(List<ConfigDescriptionParameter> configDescriptions, List<Input> inputs) {
@@ -72,6 +74,12 @@ public class HeatingOptimizerActionType extends ActionType {
         final ConfigDescriptionParameter maxSolvingTime = ConfigDescriptionParameterBuilder
                 .create(CONFIG_MAX_SOLVING_TIME, Type.DECIMAL).withRequired(true)
                 .withLabel("Maximum time to use for solving the linear programming problem in seconds").build();
+        final ConfigDescriptionParameter priceFloorSoft = ConfigDescriptionParameterBuilder
+                .create(CONFIG_PRICE_FLOOR_SOFT, Type.DECIMAL).withRequired(false)
+                .withLabel("Allow heating when price is below average price and given level").build();
+        final ConfigDescriptionParameter priceFloorHard = ConfigDescriptionParameterBuilder
+                .create(CONFIG_PRICE_FLOOR_HARD, Type.DECIMAL).withRequired(false)
+                .withLabel("Allow heating when price is below given level").build();
         final ConfigDescriptionParameter heatingControlItem = ConfigDescriptionParameterBuilder
                 .create(CONFIG_HEATING_CONTROL_OUTPUT_ITEM, Type.TEXT).withRequired(true).withContext("item")
                 .withLabel("Result item").build();
@@ -79,7 +87,7 @@ public class HeatingOptimizerActionType extends ActionType {
         List<ConfigDescriptionParameter> config = new ArrayList<ConfigDescriptionParameter>();
         Collections.addAll(config, persistenceServiceId, spotPrices, airTemperatures, heatingTemperatures, heatingNeeds,
                 gapTemperatures, gaps, maxStartsTemperatures, maxStarts, minContHeatingPeriod, maxSolvingTime,
-                heatingControlItem);
+                priceFloorSoft, priceFloorHard, heatingControlItem);
         List<Input> input = new ArrayList<>();
         return new HeatingOptimizerActionType(config, input);
     }

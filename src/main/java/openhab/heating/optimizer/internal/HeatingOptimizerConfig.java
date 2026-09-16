@@ -17,6 +17,8 @@ public class HeatingOptimizerConfig {
     public String maxStarts = "";
     public float minHeatingPeriod;
     public float maxSolvingTime;
+    public double priceFloorSoft;
+    public double priceFloorHard;
     public String heatingControlItem = "";
 
     public double[] getHeatingTemperatures() {

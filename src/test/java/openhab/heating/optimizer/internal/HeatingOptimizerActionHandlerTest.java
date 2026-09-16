@@ -83,6 +83,16 @@ public class HeatingOptimizerActionHandlerTest {
         // assertEquals(2, largestGap);
     }
 
+    @Test
+    public void testHeatingThresholds() {
+        double[] heating = { 0, 0, 1, 0, 0, 0, 0, 1 };
+        double[] prices = { 10, 2, 2, 10, 2, 10, 1, 10 };
+
+        var result = HeatingOptimizerActionHandler.applyHeatingBasedOnThresholds(heating, prices, 5, 2, 2);
+
+        assertArrayEquals(new double[] { 0, 1, 1, 0, 0, 0, 1, 1 }, result);
+    }
+
     protected static double[] testSuccessfulHeatingOptimization(double[] prices, int totalHeatingNeed,
             int maxHeatingGapDuringFirstPeriod, int maxHeatingGapDuringSecondPeriod, int maxStartsDuringFirstPeriod,
             int maxStartsDuringSecondPeriod, int minHeatingPeriod, int firstGapSize, int firstPeriodLength,
