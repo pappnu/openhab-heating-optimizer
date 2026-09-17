@@ -4,6 +4,14 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 
 @NonNullByDefault
 public class MathUtils {
+    public static double average(double[] values, int startIdx, int endIdx) {
+        double sum = 0;
+        for (int i = startIdx; i < endIdx; i++) {
+            sum += values[i];
+        }
+        return sum / (endIdx - startIdx);
+    }
+
     public static float lerp(float start, float end, float proportion) {
         return start + proportion * (end - start);
     }

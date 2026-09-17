@@ -151,8 +151,8 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
                 }
             }
 
-            // 1379 minutes == 22 hours 59 minutes
-            if (optimizationEnd.isAfter(tomorrow.plusMinutes(1379))) {
+            // 720 minutes == 12 hours
+            if (optimizationEnd.isAfter(tomorrow.plusMinutes(720))) {
                 // Optimize tomorrow as well
                 var avgAirTempSecondPeriod = Items.getStateFloat(
                         PersistenceExtensions.averageBetween(airTemperaturesItem, tomorrow, tomorrow.plusDays(1)));
@@ -196,8 +196,12 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
             if ((result.status() == MPSolver.ResultStatus.OPTIMAL || result.status() == MPSolver.ResultStatus.FEASIBLE)
                     && heating != null) {
                 double[] heatingPoints = Arrays.stream(heating).mapToDouble(entry -> entry.solutionValue()).toArray();
-                applyHeatingBasedOnThresholds(heatingPoints, prices, conf.priceFloorSoft, conf.priceFloorHard,
-                        minHeatingPeriod);
+                applyHeatingBasedOnThresholds(heatingPoints, prices,
+                        Items.getStateDouble(PersistenceExtensions.averageBetween(spotPricesItem, today, tomorrow,
+                                conf.persistenceServiceId)),
+                        Items.getStateDouble(
+                                PersistenceExtensions.averageBetween(spotPricesItem, tomorrow, tomorrow.plusDays(1))),
+                        timeStepsInFirstPeriod, conf.priceFloorSoft, conf.priceFloorHard, minHeatingPeriod);
                 Items.persistControlPoints(heatingControlItem, heatingPoints, optStart, timeStep,
                         conf.persistenceServiceId);
 
@@ -444,11 +448,11 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
             MPVariable @Nullable [] heating) {
     }
 
-    protected static double[] applyHeatingBasedOnThresholds(double[] heating, double[] prices, double priceFloorSoft,
+    protected static double[] applyHeatingBasedOnThresholds(double[] heating, double[] prices,
+            double firstPeriodAvgPrice, double secondPeriodAvgPrice, int firstPeriodLength, double priceFloorSoft,
             double priceFloorHard, int minPeriodLength) {
-        double avgPrice = Arrays.stream(prices).average().getAsDouble();
-
         for (int i = 0; i < heating.length; i++) {
+            double avgPrice = i < firstPeriodLength ? firstPeriodAvgPrice : secondPeriodAvgPrice;
             if (prices[i] < priceFloorHard || prices[i] < priceFloorSoft && prices[i] < avgPrice) {
                 heating[i] = 1;
             }

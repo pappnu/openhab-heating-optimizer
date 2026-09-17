@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import com.google.ortools.linearsolver.MPSolver;
 import com.google.ortools.linearsolver.MPVariable;
 
+import openhab.heating.utils.MathUtils;
+
 @NonNullByDefault
 public class HeatingOptimizerActionHandlerTest {
     protected static final long SOLVING_TIME_LIMIT = 10000;
@@ -88,7 +90,8 @@ public class HeatingOptimizerActionHandlerTest {
         double[] heating = { 0, 0, 1, 0, 0, 0, 0, 1 };
         double[] prices = { 10, 2, 2, 10, 2, 10, 1, 10 };
 
-        var result = HeatingOptimizerActionHandler.applyHeatingBasedOnThresholds(heating, prices, 5, 2, 2);
+        var result = HeatingOptimizerActionHandler.applyHeatingBasedOnThresholds(heating, prices,
+                MathUtils.average(prices, 0, 4), MathUtils.average(prices, 4, prices.length), 4, 5, 2, 2);
 
         assertArrayEquals(new double[] { 0, 1, 1, 0, 0, 0, 1, 1 }, result);
     }
