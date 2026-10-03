@@ -9,6 +9,9 @@ public class HeatingOptimizerConfig {
     public String persistenceServiceId = "";
     public String spotPricesItem = "";
     public String airTemperaturesItem = "";
+    public String heatingNeedPredictionModelItem = "";
+    public String solarForecastItem = "";
+    public double targetInsideTemperature = 19;
     public String heatingTemperatures = "";
     public String heatingNeeds = "";
     public String gapTemperatures = "";

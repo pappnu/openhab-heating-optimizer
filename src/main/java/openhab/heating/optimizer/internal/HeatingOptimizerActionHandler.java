@@ -20,12 +20,14 @@ import org.openhab.core.persistence.extensions.PersistenceExtensions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.Gson;
 import com.google.ortools.linearsolver.MPConstraint;
 import com.google.ortools.linearsolver.MPObjective;
 import com.google.ortools.linearsolver.MPSolver;
 import com.google.ortools.linearsolver.MPSolver.ResultStatus;
 import com.google.ortools.linearsolver.MPVariable;
 
+import openhab.heating.optimizer.internal.HeatingNeedModelingActionHandler.PolynomialHeatingNeedModel;
 import openhab.heating.utils.Items;
 import openhab.heating.utils.MathUtils;
 import openhab.heating.utils.OrToolsNativeLoader;
@@ -36,6 +38,7 @@ import openhab.heating.utils.Transform;
 public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> implements ActionHandler {
     private final ItemRegistry itemRegistry;
     private final ScheduledExecutorService scheduler;
+    private final Gson gson = new Gson();
     private final Logger logger = LoggerFactory.getLogger(HeatingOptimizerActionHandler.class);
     private UUID uid = UUID.randomUUID();
 
@@ -65,6 +68,17 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
 
             var airTemperaturesItem = Items.getItem(itemRegistry, conf.airTemperaturesItem);
             var heatingControlItem = Items.getItem(itemRegistry, conf.heatingControlItem);
+            PolynomialHeatingNeedModel model = null;
+            if (!conf.heatingNeedPredictionModelItem.isBlank()) {
+                var modelItem = Items.getItem(itemRegistry, conf.heatingNeedPredictionModelItem);
+                model = gson.fromJson(modelItem.getState().toString(), PolynomialHeatingNeedModel.class);
+            }
+            double dailySolarExposureFirstPeriod = model == null ? 0 : model.means()[1];
+            if (model != null && !conf.solarForecastItem.isBlank()) {
+                var solarForecastItem = Items.getItem(itemRegistry, conf.solarForecastItem);
+                dailySolarExposureFirstPeriod = Items.getStateDouble(PersistenceExtensions
+                        .riemannSumBetween(solarForecastItem, today, tomorrow, conf.persistenceServiceId));
+            }
 
             var optStart = TimeUtils.truncateToNextQuarterHour(now);
 
@@ -119,15 +133,17 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
                     optStart.minusSeconds(1), conf.persistenceServiceId);
             if (realizedHeatingDuringFirstPeriodState != null) {
                 heatingNeedDuringFirstPeriod = TimeUtils.convertHoursToTimeSteps(
-                        MathUtils.interpolate(heatingTemps, heatingNeeds, avgAirTempFirstPeriod), timeStep)
-                        - Items.getStateInt(realizedHeatingDuringFirstPeriodState);
+                        predictHeatingNeed(model, heatingTemps, heatingNeeds, avgAirTempFirstPeriod,
+                                dailySolarExposureFirstPeriod, conf.targetInsideTemperature),
+                        timeStep) - Items.getStateInt(realizedHeatingDuringFirstPeriodState);
             } else {
                 // Assume that past heating has been distributed in proportion to passed time
                 double nanosecondsInADay = 86400000000000d;
                 heatingNeedDuringFirstPeriod = Math
                         .toIntExact(Math.round((Duration.between(optStart, tomorrow).toNanos() / nanosecondsInADay)
                                 * TimeUtils.convertHoursToTimeSteps(
-                                        MathUtils.interpolate(heatingTemps, heatingNeeds, avgAirTempFirstPeriod),
+                                        predictHeatingNeed(model, heatingTemps, heatingNeeds, avgAirTempFirstPeriod,
+                                                dailySolarExposureFirstPeriod, conf.targetInsideTemperature),
                                         timeStep)));
             }
 
@@ -156,8 +172,16 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
                 // Optimize tomorrow as well
                 var avgAirTempSecondPeriod = Items.getStateFloat(
                         PersistenceExtensions.averageBetween(airTemperaturesItem, tomorrow, tomorrow.plusDays(1)));
+                double dailySolarExposureSecondPeriod = model == null ? 0 : model.means()[1];
+                if (model != null && !conf.solarForecastItem.isBlank()) {
+                    var solarForecastItem = Items.getItem(itemRegistry, conf.solarForecastItem);
+                    dailySolarExposureSecondPeriod = Items.getStateDouble(PersistenceExtensions.riemannSumBetween(
+                            solarForecastItem, tomorrow, tomorrow.plusDays(1), conf.persistenceServiceId));
+                }
                 heatingNeedDuringSecondPeriod = TimeUtils.convertHoursToTimeSteps(
-                        MathUtils.interpolate(heatingTemps, heatingNeeds, avgAirTempSecondPeriod), timeStep);
+                        predictHeatingNeed(model, heatingTemps, heatingNeeds, avgAirTempSecondPeriod,
+                                dailySolarExposureSecondPeriod, conf.targetInsideTemperature),
+                        timeStep);
                 maxHeatingGapDuringSecondPeriod = TimeUtils.convertHoursToTimeSteps(
                         MathUtils.interpolate(gapTemps, maxGaps, avgAirTempSecondPeriod), timeStep);
                 maxStartsDuringSecondPeriod = maxStarts.length > 0
@@ -215,6 +239,18 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
             logger.error("Failed to optimize heating: " + uid, e);
             throw e;
         }
+    }
+
+    protected static double predictHeatingNeed(@Nullable PolynomialHeatingNeedModel model, double[] heatingTemps,
+            double[] heatingNeeds, double airTemperature, double solarForecast, double targetInsideTemperature) {
+        if (model == null) {
+            return MathUtils.interpolate(heatingTemps, heatingNeeds, airTemperature);
+        }
+
+        var independentVariables = model.means().clone();
+        independentVariables[0] = Math.max(targetInsideTemperature - airTemperature, 0);
+        independentVariables[1] = solarForecast;
+        return model.estimate(independentVariables);
     }
 
     protected static OptimizationResult optimizeHeatingWithLinearProgramming(double[] prices, int totalHeatingNeed,

@@ -24,6 +24,7 @@ public class HeatingOptimizerModuleTypeProvider implements ModuleTypeProvider {
         providedModuleTypes.put(HeatingOptimizerActionType.UID, HeatingOptimizerActionType.initialize());
         providedModuleTypes.put(ContinuousPeriodOptimizerActionType.UID,
                 ContinuousPeriodOptimizerActionType.initialize());
+        providedModuleTypes.put(HeatingNeedModelingActionType.UID, HeatingNeedModelingActionType.initialize());
     }
 
     @Override

@@ -14,6 +14,7 @@ import org.openhab.core.automation.handler.BaseModuleHandlerFactory;
 import org.openhab.core.automation.handler.ModuleHandler;
 import org.openhab.core.automation.handler.ModuleHandlerFactory;
 import org.openhab.core.common.ThreadPoolManager;
+import org.openhab.core.events.EventPublisher;
 import org.openhab.core.items.ItemRegistry;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -31,6 +32,9 @@ public class HeatingOptimizerModuleHandlerFactory extends BaseModuleHandlerFacto
     @Reference
     private @NonNullByDefault({}) ItemRegistry itemRegistry;
 
+    @Reference
+    private @NonNullByDefault({}) EventPublisher eventPublisher;
+
     private final ScheduledExecutorService scheduler = ThreadPoolManager
             .getScheduledPool(HeatingOptimizerModuleHandlerFactory.class.getName());
 
@@ -38,6 +42,7 @@ public class HeatingOptimizerModuleHandlerFactory extends BaseModuleHandlerFacto
         List<String> temp = new ArrayList<String>();
         temp.add(HeatingOptimizerActionType.UID);
         temp.add(ContinuousPeriodOptimizerActionType.UID);
+        temp.add(HeatingNeedModelingActionType.UID);
         TYPES = Collections.unmodifiableCollection(temp);
     }
 
@@ -56,6 +61,9 @@ public class HeatingOptimizerModuleHandlerFactory extends BaseModuleHandlerFacto
                 break;
             case ContinuousPeriodOptimizerActionType.UID:
                 moduleHandler = new ContinuousPeriodOptimizerActionHandler((Action) module, itemRegistry, scheduler);
+                break;
+            case HeatingNeedModelingActionType.UID:
+                moduleHandler = new HeatingNeedModelingActionHandler((Action) module, itemRegistry, eventPublisher);
                 break;
 
             default:

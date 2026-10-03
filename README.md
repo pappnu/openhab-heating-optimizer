@@ -159,3 +159,17 @@ g_{t-1}+1 & \text{if } x_t = 0,
 \qquad
 G \ge g_t \quad\text{for all }t.
 $$
+
+### Heating need modeling
+
+Heating need modeling trains a polynomial model that estimates how many hours the heating system must run for a given day based on the indoor-outdoor temperature difference and solar exposure.
+
+The following settings can be configured in the UI:
+
+- `Persistence service`: ID of the persistence service to use for fetching and storing data.
+- `Heatpump on/off item`: Item containing the heat pump operating state.
+- `Inside temperature item`: Item containing the indoor temperature used to estimate heating demand.
+- `Outside temperature item`: Item containing the outdoor temperature used to estimate heating demand.
+- `Solar forecast item`: Item containing the solar forecast values used to estimate the daily solar exposure.
+- `Maximum data gap in days`: Maximum consecutive missing days to tolerate before stopping the backward data lookup.
+- `Output item`: Item where the fitted model is stored as JSON.

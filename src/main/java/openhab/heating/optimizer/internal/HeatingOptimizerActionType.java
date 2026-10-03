@@ -19,6 +19,9 @@ public class HeatingOptimizerActionType extends ActionType {
     public static final String CONFIG_PERSISTENCE_SERVICE_ID = "persistenceServiceId";
     public static final String CONFIG_SPOT_PRICES = "spotPricesItem";
     public static final String CONFIG_AIR_TEMPERATURES = "airTemperaturesItem";
+    public static final String CONFIG_HEATING_NEED_PREDICTION_MODEL = "heatingNeedPredictionModelItem";
+    public static final String CONFIG_SOLAR_FORECAST = "solarForecastItem";
+    public static final String CONFIG_TARGET_INSIDE_TEMPERATURE = "targetInsideTemperature";
     public static final String CONFIG_HEATING_TEMPERATURES = "heatingTemperatures";
     public static final String CONFIG_HEATING_NEEDS = "heatingNeeds";
     public static final String CONFIG_GAP_TEMPERATURES = "gapTemperatures";
@@ -47,6 +50,15 @@ public class HeatingOptimizerActionType extends ActionType {
         final ConfigDescriptionParameter airTemperatures = ConfigDescriptionParameterBuilder
                 .create(CONFIG_AIR_TEMPERATURES, Type.TEXT).withRequired(true).withContext("item")
                 .withLabel("Air temperatures item").build();
+        final ConfigDescriptionParameter heatingNeedPredictionModel = ConfigDescriptionParameterBuilder
+                .create(CONFIG_HEATING_NEED_PREDICTION_MODEL, Type.TEXT).withRequired(false).withContext("item")
+                .withLabel("Heating need prediction model item").build();
+        final ConfigDescriptionParameter solarForecast = ConfigDescriptionParameterBuilder
+                .create(CONFIG_SOLAR_FORECAST, Type.TEXT).withRequired(false).withContext("item")
+                .withLabel("Solar forecast item for heating need prediction").build();
+        final ConfigDescriptionParameter targetInsideTemperature = ConfigDescriptionParameterBuilder
+                .create(CONFIG_TARGET_INSIDE_TEMPERATURE, Type.DECIMAL).withRequired(false)
+                .withLabel("Target inside temperature for heating need prediction").build();
         final ConfigDescriptionParameter heatingTemperatures = ConfigDescriptionParameterBuilder
                 .create(CONFIG_HEATING_TEMPERATURES, Type.TEXT).withRequired(true)
                 .withLabel("Ascending average temperature levels for heating needs, e.g. '-20.0,0.5,15'.").build();
@@ -85,9 +97,10 @@ public class HeatingOptimizerActionType extends ActionType {
                 .withLabel("Result item").build();
 
         List<ConfigDescriptionParameter> config = new ArrayList<ConfigDescriptionParameter>();
-        Collections.addAll(config, persistenceServiceId, spotPrices, airTemperatures, heatingTemperatures, heatingNeeds,
-                gapTemperatures, gaps, maxStartsTemperatures, maxStarts, minContHeatingPeriod, maxSolvingTime,
-                priceFloorSoft, priceFloorHard, heatingControlItem);
+        Collections.addAll(config, persistenceServiceId, spotPrices, airTemperatures, heatingNeedPredictionModel,
+                solarForecast, targetInsideTemperature, heatingTemperatures, heatingNeeds, gapTemperatures, gaps,
+                maxStartsTemperatures, maxStarts, minContHeatingPeriod, maxSolvingTime, priceFloorSoft, priceFloorHard,
+                heatingControlItem);
         List<Input> input = new ArrayList<>();
         return new HeatingOptimizerActionType(config, input);
     }

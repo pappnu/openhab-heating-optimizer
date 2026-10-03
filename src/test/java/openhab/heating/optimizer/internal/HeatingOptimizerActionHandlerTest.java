@@ -1,6 +1,7 @@
 package openhab.heating.optimizer.internal;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -17,6 +18,16 @@ import openhab.heating.utils.MathUtils;
 @NonNullByDefault
 public class HeatingOptimizerActionHandlerTest {
     protected static final long SOLVING_TIME_LIMIT = 10000;
+
+    @Test
+    public void testHeatingNeedPredictionModel() {
+        var model = new HeatingNeedModelingActionHandler.PolynomialHeatingNeedModel(new double[] { 2, 3, 5 }, 2, 1,
+                new double[] { 0, 0 }, new double[] { 1, 1 });
+
+        assertEquals(67,
+                HeatingOptimizerActionHandler.predictHeatingNeed(model, new double[] {}, new double[] {}, 4, 4, 19),
+                0.000001);
+    }
 
     @Test
     public void testHeatingContinuation() {
