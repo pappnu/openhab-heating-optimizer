@@ -130,14 +130,14 @@
       <artifactId>ortools-linux-x86-64</artifactId>
       <!-- Use the same version as ortools-java -->
       <version>[9.15.6755,10.0.0)</version>
-      <scope>compile</scope>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.google.ortools</groupId>
       <artifactId>ortools-linux-aarch64</artifactId>
       <!-- Use the same version as ortools-java -->
       <version>[9.15.6755,10.0.0)</version>
-      <scope>compile</scope>
+      <scope>provided</scope>
     </dependency>
 
     <!-- Required by OR-Tools -->
@@ -197,7 +197,7 @@
             <configuration>
               <includeScope>compile</includeScope>
               <excludeTransitive>false</excludeTransitive>
-              <excludes>**/module-info.class,org/bytedeco/**,META-INF/maven/**</excludes>
+              <excludes>**/module-info.class,org/bytedeco/**,org/slf4j/**,META-INF/maven/**</excludes>
               <graphRoots>
                 <graphRoot>
                   <groupId>com.github.haifengl</groupId>
@@ -220,6 +220,21 @@
               <includeTypes>jar</includeTypes>
               <excludeTransitive>true</excludeTransitive>
               <excludeClassifiers>linux-x86_64,linux-arm64</excludeClassifiers>
+              <excludeArtifactIds>ortools-linux-x86-64,ortools-linux-aarch64</excludeArtifactIds>
+              <excludes>**/module-info.class,org/slf4j/**,META-INF/maven/**</excludes>
+              <outputDirectory>${project.build.directory}/classes</outputDirectory>
+            </configuration>
+          </execution>
+          <execution>
+            <id>embed-ortools-native-resources</id>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <includeScope>compile</includeScope>
+              <includeTypes>jar</includeTypes>
+              <includeArtifactIds>ortools-linux-x86-64,ortools-linux-aarch64</includeArtifactIds>
+              <excludeTransitive>true</excludeTransitive>
               <excludes>**/module-info.class,META-INF/maven/**</excludes>
               <outputDirectory>${project.build.directory}/classes</outputDirectory>
             </configuration>
