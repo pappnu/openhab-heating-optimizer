@@ -43,4 +43,12 @@ public class MathUtils {
 
         return target[target.length - 1];
     }
+
+    public static boolean equals(double a, double b, double tolerance) {
+        return Math.abs(a - b) < tolerance;
+    }
+
+    public static boolean equals(double a, double b) {
+        return equals(a, b, 0.00001);
+    }
 }

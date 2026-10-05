@@ -429,6 +429,14 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
                 }
                 MPVariable maximumGap = solver.makeIntVar(0, n, "maximumGap");
 
+                double[] heatingGapHint = new double[n];
+                double maximumGapHint = 0;
+                for (int t = 0; t < n; t++) {
+                    heatingGapHint[t] = MathUtils.equals(heatingHint[t], 1) ? 0
+                            : t == 0 ? 1 : heatingGapHint[t - 1] + 1;
+                    maximumGapHint = Math.max(maximumGapHint, heatingGapHint[t]);
+                }
+
                 MPConstraint initialGapBounds = solver.makeConstraint(1, 1, "InitialGapBounds");
                 initialGapBounds.setCoefficient(heatingGap[0], 1);
                 initialGapBounds.setCoefficient(heating[0], 1);
@@ -465,6 +473,8 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
 
                 solver.setHint(heating, heatingHint);
                 solver.setHint(heatingStart, heatingStartHint);
+                solver.setHint(heatingGap, heatingGapHint);
+                solver.setHint(new MPVariable[] { maximumGap }, new double[] { maximumGapHint });
                 resultStatus = solver.solve();
             }
         }

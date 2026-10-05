@@ -74,7 +74,7 @@ public class HeatingOptimizerActionHandlerTest {
         double[] prices = { 1, 5, 1, 5, 1, 1, 1 };
         var heating = testSuccessfulHeatingOptimization(prices, 3, prices.length, prices.length, -1, -1, 1,
                 prices.length, prices.length, 3, false);
-        assertArrayEquals(new double[] { 0, 0, 0, 0, 1, 1, 1 }, heating);
+        assertArrayEquals(new double[] { 0, 0, 0, 0, 1, 1, 1 }, heating, 0.000001);
     }
 
     @Test
