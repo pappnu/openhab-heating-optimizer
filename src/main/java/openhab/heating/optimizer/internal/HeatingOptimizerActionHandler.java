@@ -208,14 +208,37 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
             boolean prevEndsInHeating = (stateBeforeOptStart != null)
                     && Items.getStateInt(stateBeforeOptStart.getState()) == 1;
 
-            var minHeatingPeriod = Math.min(prices.length,
-                    TimeUtils.convertHoursToTimeSteps(conf.minHeatingPeriod, timeStep));
+            int configuredMinHeatingPeriod = TimeUtils.convertHoursToTimeSteps(conf.minHeatingPeriod, timeStep);
+            int minHeatingPeriod = Math.min(prices.length, configuredMinHeatingPeriod);
+            int heatingToForceAtStart = 0;
+            if (prevEndsInHeating) {
+                var minHeatingPeriodStart = optStart.minus(timeStep.multipliedBy(configuredMinHeatingPeriod));
+                var pastHeating = Items.getAllStatesBetweenIncludingStartState(heatingControlItem,
+                        minHeatingPeriodStart, optStart.minusSeconds(1), conf.persistenceServiceId);
+                @Nullable
+                ZonedDateTime heatingRunStart = minHeatingPeriodStart;
+                if (pastHeating != null) {
+                    for (var historicItem : pastHeating) {
+                        if (Items.getStateInt(historicItem.getState()) == 0) {
+                            heatingRunStart = null;
+                        } else if (heatingRunStart == null) {
+                            heatingRunStart = historicItem.getTimestamp();
+                        }
+                    }
+                }
+                if (heatingRunStart != null) {
+                    int elapsedHeating = TimeUtils.convertToTimeSteps(Duration.between(heatingRunStart, optStart),
+                            timeStep);
+                    heatingToForceAtStart = Math.min(prices.length,
+                            Math.max(0, configuredMinHeatingPeriod - elapsedHeating));
+                }
+            }
             var maxSolvingTime = Math.round(1000 * conf.maxSolvingTime);
 
             var result = optimizeHeatingWithLinearProgramming(prices, totalHeatingNeed, maxHeatingGapDuringFirstPeriod,
                     maxHeatingGapDuringSecondPeriod, maxStartsDuringFirstPeriod, maxStartsDuringSecondPeriod,
                     minHeatingPeriod, firstGapSize, timeStepsInFirstPeriod, heatingNeedDuringFirstPeriod,
-                    prevEndsInHeating, maxSolvingTime);
+                    prevEndsInHeating, heatingToForceAtStart, maxSolvingTime);
             var heating = result.heating();
             if ((result.status() == MPSolver.ResultStatus.OPTIMAL || result.status() == MPSolver.ResultStatus.FEASIBLE)
                     && heating != null) {
@@ -256,7 +279,8 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
     protected static OptimizationResult optimizeHeatingWithLinearProgramming(double[] prices, int totalHeatingNeed,
             int maxHeatingGapDuringFirstPeriod, int maxHeatingGapDuringSecondPeriod, int maxStartsDuringFirstPeriod,
             int maxStartsDuringSecondPeriod, int minHeatingPeriod, int firstGapSize, int firstPeriodLength,
-            int heatingNeedDuringFirstPeriod, boolean previousPeriodEndsInHeating, long solvingTimeLimit) {
+            int heatingNeedDuringFirstPeriod, boolean previousPeriodEndsInHeating, int heatingToForceAtStart,
+            long solvingTimeLimit) {
         int heatingNeedDuringSecondPeriod = totalHeatingNeed - heatingNeedDuringFirstPeriod;
 
         OrToolsNativeLoader.load();
@@ -278,6 +302,11 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
         for (int t = 0; t < n; t++) {
             heating[t] = solver.makeBoolVar("x_" + t);
             heatingStart[t] = solver.makeBoolVar("y_" + t);
+        }
+
+        for (int t = 0; t < Math.min(heatingToForceAtStart, n); t++) {
+            MPConstraint forceHeating = solver.makeConstraint(1, 1, "ForceHeatingAtStart_" + t);
+            forceHeating.setCoefficient(heating[t], 1);
         }
 
         // Objective Function: Minimize Sum(prices[t] * heating[t])
@@ -385,6 +414,11 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
 
         // Solve
         solver.setTimeLimit(solvingTimeLimit);
+        if (heatingToForceAtStart > 0) {
+            double[] heatingHint = new double[n];
+            Arrays.fill(heatingHint, 0, Math.min(heatingToForceAtStart, n), 1);
+            solver.setHint(heating, heatingHint);
+        }
         MPSolver.ResultStatus resultStatus = solver.solve();
 
         if (resultStatus == ResultStatus.OPTIMAL) {
