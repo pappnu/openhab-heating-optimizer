@@ -43,6 +43,7 @@ public class HeatingOptimizerModuleHandlerFactory extends BaseModuleHandlerFacto
         temp.add(HeatingOptimizerActionType.UID);
         temp.add(ContinuousPeriodOptimizerActionType.UID);
         temp.add(HeatingNeedModelingActionType.UID);
+        temp.add(NumericTargetSetterActionType.UID);
         TYPES = Collections.unmodifiableCollection(temp);
     }
 
@@ -64,6 +65,9 @@ public class HeatingOptimizerModuleHandlerFactory extends BaseModuleHandlerFacto
                 break;
             case HeatingNeedModelingActionType.UID:
                 moduleHandler = new HeatingNeedModelingActionHandler((Action) module, itemRegistry, eventPublisher);
+                break;
+            case NumericTargetSetterActionType.UID:
+                moduleHandler = new NumericTargetSetterActionHandler((Action) module, itemRegistry, eventPublisher);
                 break;
 
             default:
