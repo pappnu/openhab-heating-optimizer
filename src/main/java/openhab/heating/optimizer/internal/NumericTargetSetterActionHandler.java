@@ -33,12 +33,12 @@ public class NumericTargetSetterActionHandler extends BaseModuleHandler<Action> 
 
         if (config.restore) {
             var backupState = Items.getStateDecimal(backupItem.getState());
-            eventPublisher.post(ItemEventFactory.createStateEvent(targetItem.getName(), backupState));
+            eventPublisher.post(ItemEventFactory.createCommandEvent(targetItem.getName(), backupState));
         } else {
             var currentTargetState = Items.getStateDecimal(targetItem.getState());
-            eventPublisher.post(ItemEventFactory.createStateEvent(backupItem.getName(), currentTargetState));
-            eventPublisher
-                    .post(ItemEventFactory.createStateEvent(targetItem.getName(), new DecimalType(config.targetValue)));
+            eventPublisher.post(ItemEventFactory.createCommandEvent(backupItem.getName(), currentTargetState));
+            eventPublisher.post(
+                    ItemEventFactory.createCommandEvent(targetItem.getName(), new DecimalType(config.targetValue)));
         }
 
         return null;

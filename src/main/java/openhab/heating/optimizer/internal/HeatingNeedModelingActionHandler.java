@@ -56,8 +56,8 @@ public class HeatingNeedModelingActionHandler extends BaseModuleHandler<Action> 
 
         if (results.size() > POLYNOMIAL_DEGREE) {
             var model = fit(results, POLYNOMIAL_DEGREE);
-            eventPublisher
-                    .post(ItemEventFactory.createStateEvent(outputItem.getName(), new StringType(gson.toJson(model))));
+            eventPublisher.post(
+                    ItemEventFactory.createCommandEvent(outputItem.getName(), new StringType(gson.toJson(model))));
             logger.info("Heating need model updated based on {} data points", results.size());
         } else {
             logger.error(
