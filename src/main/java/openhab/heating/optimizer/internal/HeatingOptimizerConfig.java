@@ -16,6 +16,8 @@ public class HeatingOptimizerConfig {
     public String heatingNeeds = "";
     public String gapTemperatures = "";
     public String gaps = "";
+    public String requiredHeatingAfterMaxHeatingGapTemperatures = "";
+    public String requiredHeatingAfterMaxHeatingGap = "";
     public String maxStartsTemperatures = "";
     public String maxStarts = "";
     public float minHeatingPeriod;
@@ -38,6 +40,14 @@ public class HeatingOptimizerConfig {
 
     public double[] getGaps() {
         return Config.toDoubles(gaps);
+    }
+
+    public double[] getRequiredHeatingAfterMaxHeatingGapTemperatures() {
+        return Config.toDoubles(requiredHeatingAfterMaxHeatingGapTemperatures);
+    }
+
+    public double[] getRequiredHeatingAfterMaxHeatingGap() {
+        return Config.toDoubles(requiredHeatingAfterMaxHeatingGap);
     }
 
     public double[] getMaxStartsTemperatures() {

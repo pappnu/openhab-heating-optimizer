@@ -46,6 +46,14 @@ public class HeatingOptimizerActionHandlerTest {
     }
 
     @Test
+    public void testRequiredHeatingAfterMaxGapIgnoresLastFullInterval() {
+        double[] prices = { 1, 100, 5, 2, 100, 100, 3, 4 };
+        var heating = testSuccessfulHeatingOptimization(prices, 4, 2, 2, -1, -1, 1, 2, prices.length, 4, false, 0, 2,
+                2);
+        assertArrayEquals(new double[] { 0, 0, 1, 1, 0, 0, 1, 1 }, heating, 0.000001);
+    }
+
+    @Test
     public void testHeatingNoncontinuation() {
         double[] prices = { 2, 10, 10, 10, 1, -1 };
         var heating = testSuccessfulHeatingOptimization(prices, 3, prices.length, prices.length, -1, -1, 2,
@@ -129,10 +137,22 @@ public class HeatingOptimizerActionHandlerTest {
             int maxHeatingGapDuringFirstPeriod, int maxHeatingGapDuringSecondPeriod, int maxStartsDuringFirstPeriod,
             int maxStartsDuringSecondPeriod, int minHeatingPeriod, int firstGapSize, int firstPeriodLength,
             int heatingNeedDuringFirstPeriod, boolean previousPeriodEndsInHeating, int heatingToForceAtStart) {
+        return testSuccessfulHeatingOptimization(prices, totalHeatingNeed, maxHeatingGapDuringFirstPeriod,
+                maxHeatingGapDuringSecondPeriod, maxStartsDuringFirstPeriod, maxStartsDuringSecondPeriod,
+                minHeatingPeriod, firstGapSize, firstPeriodLength, heatingNeedDuringFirstPeriod,
+                previousPeriodEndsInHeating, heatingToForceAtStart, 0, 0);
+    }
+
+    protected static double[] testSuccessfulHeatingOptimization(double[] prices, int totalHeatingNeed,
+            int maxHeatingGapDuringFirstPeriod, int maxHeatingGapDuringSecondPeriod, int maxStartsDuringFirstPeriod,
+            int maxStartsDuringSecondPeriod, int minHeatingPeriod, int firstGapSize, int firstPeriodLength,
+            int heatingNeedDuringFirstPeriod, boolean previousPeriodEndsInHeating, int heatingToForceAtStart,
+            int requiredHeatingAfterMaxGap, int requiredHeatingAfterMaxGapDuringSecondPeriod) {
         var result = HeatingOptimizerActionHandler.optimizeHeatingWithLinearProgramming(prices, totalHeatingNeed,
                 maxHeatingGapDuringFirstPeriod, maxHeatingGapDuringSecondPeriod, maxStartsDuringFirstPeriod,
-                maxStartsDuringSecondPeriod, minHeatingPeriod, firstGapSize, firstPeriodLength,
-                heatingNeedDuringFirstPeriod, previousPeriodEndsInHeating, heatingToForceAtStart, SOLVING_TIME_LIMIT);
+                maxStartsDuringSecondPeriod, requiredHeatingAfterMaxGap, requiredHeatingAfterMaxGapDuringSecondPeriod,
+                minHeatingPeriod, firstGapSize, firstPeriodLength, heatingNeedDuringFirstPeriod,
+                previousPeriodEndsInHeating, heatingToForceAtStart, SOLVING_TIME_LIMIT);
         assertNotNull(result);
         assertTrue(
                 result.status() == MPSolver.ResultStatus.OPTIMAL || result.status() == MPSolver.ResultStatus.FEASIBLE);

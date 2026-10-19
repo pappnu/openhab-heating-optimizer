@@ -115,6 +115,8 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
             var heatingNeeds = conf.getHeatingNeeds();
             var gapTemps = conf.getGapTemperatures();
             var maxGaps = conf.getGaps();
+            var requiredHeatingAfterMaxHeatingGapTemps = conf.getRequiredHeatingAfterMaxHeatingGapTemperatures();
+            var requiredHeatingAfterMaxHeatingGap = conf.getRequiredHeatingAfterMaxHeatingGap();
             var maxStartsTemps = conf.getMaxStartsTemperatures();
             var maxStarts = conf.getMaxStarts();
             int timeStepsInADay = 96;
@@ -126,6 +128,15 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
             int maxHeatingGapDuringFirstPeriod = TimeUtils
                     .convertHoursToTimeSteps(MathUtils.interpolate(gapTemps, maxGaps, avgAirTempFirstPeriod), timeStep);
             int maxHeatingGapDuringSecondPeriod = timeStepsInADay;
+            int requiredHeatingAfterMaxHeatingGapDuringFirstPeriod = requiredHeatingAfterMaxHeatingGapTemps.length == 0
+                    || requiredHeatingAfterMaxHeatingGap.length == 0
+                            ? 0
+                            : TimeUtils
+                                    .convertHoursToTimeSteps(
+                                            MathUtils.interpolate(requiredHeatingAfterMaxHeatingGapTemps,
+                                                    requiredHeatingAfterMaxHeatingGap, avgAirTempFirstPeriod),
+                                            timeStep);
+            int requiredHeatingAfterMaxHeatingGapDuringSecondPeriod = 0;
             int maxStartsDuringFirstPeriod = -1;
             int maxStartsDuringSecondPeriod = -1;
 
@@ -146,6 +157,7 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
                                                 dailySolarExposureFirstPeriod, conf.targetInsideTemperature),
                                         timeStep)));
             }
+            heatingNeedDuringFirstPeriod = Math.min(timeStepsInFirstPeriod, heatingNeedDuringFirstPeriod);
 
             if (maxStarts.length > 0) {
                 int realizedStartsDuringFirstPeriod = 0;
@@ -178,12 +190,22 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
                     dailySolarExposureSecondPeriod = Items.getStateDouble(PersistenceExtensions.riemannSumBetween(
                             solarForecastItem, tomorrow, tomorrow.plusDays(1), conf.persistenceServiceId));
                 }
-                heatingNeedDuringSecondPeriod = TimeUtils.convertHoursToTimeSteps(
-                        predictHeatingNeed(model, heatingTemps, heatingNeeds, avgAirTempSecondPeriod,
-                                dailySolarExposureSecondPeriod, conf.targetInsideTemperature),
-                        timeStep);
+                heatingNeedDuringSecondPeriod = Math
+                        .min(prices.length - heatingNeedDuringFirstPeriod,
+                                TimeUtils.convertHoursToTimeSteps(
+                                        predictHeatingNeed(model, heatingTemps, heatingNeeds, avgAirTempSecondPeriod,
+                                                dailySolarExposureSecondPeriod, conf.targetInsideTemperature),
+                                        timeStep));
                 maxHeatingGapDuringSecondPeriod = TimeUtils.convertHoursToTimeSteps(
                         MathUtils.interpolate(gapTemps, maxGaps, avgAirTempSecondPeriod), timeStep);
+                requiredHeatingAfterMaxHeatingGapDuringSecondPeriod = requiredHeatingAfterMaxHeatingGapTemps.length == 0
+                        || requiredHeatingAfterMaxHeatingGap.length == 0
+                                ? 0
+                                : TimeUtils
+                                        .convertHoursToTimeSteps(
+                                                MathUtils.interpolate(requiredHeatingAfterMaxHeatingGapTemps,
+                                                        requiredHeatingAfterMaxHeatingGap, avgAirTempSecondPeriod),
+                                                timeStep);
                 maxStartsDuringSecondPeriod = maxStarts.length > 0
                         ? Math.toIntExact(
                                 Math.round(MathUtils.interpolate(maxStartsTemps, maxStarts, avgAirTempSecondPeriod)))
@@ -211,6 +233,15 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
             int configuredMinHeatingPeriod = TimeUtils.convertHoursToTimeSteps(conf.minHeatingPeriod, timeStep);
             int minHeatingPeriod = Math.min(prices.length, configuredMinHeatingPeriod);
             int heatingToForceAtStart = 0;
+            if (requiredHeatingAfterMaxHeatingGapDuringFirstPeriod > 0) {
+                var heatingDuringMaxGap = PersistenceExtensions.sumBetween(heatingControlItem,
+                        optStart.minus(timeStep.multipliedBy(maxHeatingGapDuringFirstPeriod)), optStart.minusSeconds(1),
+                        conf.persistenceServiceId);
+                int realizedHeatingDuringMaxGap = heatingDuringMaxGap == null ? 0
+                        : Items.getStateInt(heatingDuringMaxGap);
+                heatingToForceAtStart = Math.min(prices.length,
+                        Math.max(0, requiredHeatingAfterMaxHeatingGapDuringFirstPeriod - realizedHeatingDuringMaxGap));
+            }
             if (prevEndsInHeating) {
                 var minHeatingPeriodStart = optStart.minus(timeStep.multipliedBy(configuredMinHeatingPeriod));
                 var pastHeating = Items.getAllStatesBetweenIncludingStartState(heatingControlItem,
@@ -229,16 +260,18 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
                 if (heatingRunStart != null) {
                     int elapsedHeating = TimeUtils.convertToTimeSteps(Duration.between(heatingRunStart, optStart),
                             timeStep);
-                    heatingToForceAtStart = Math.min(prices.length,
-                            Math.max(0, configuredMinHeatingPeriod - elapsedHeating));
+                    heatingToForceAtStart = Math.max(heatingToForceAtStart,
+                            Math.min(prices.length, Math.max(0, configuredMinHeatingPeriod - elapsedHeating)));
                 }
             }
             var maxSolvingTime = Math.round(1000 * conf.maxSolvingTime);
 
             var result = optimizeHeatingWithLinearProgramming(prices, totalHeatingNeed, maxHeatingGapDuringFirstPeriod,
                     maxHeatingGapDuringSecondPeriod, maxStartsDuringFirstPeriod, maxStartsDuringSecondPeriod,
-                    minHeatingPeriod, firstGapSize, timeStepsInFirstPeriod, heatingNeedDuringFirstPeriod,
-                    prevEndsInHeating, heatingToForceAtStart, maxSolvingTime);
+                    requiredHeatingAfterMaxHeatingGapDuringFirstPeriod,
+                    requiredHeatingAfterMaxHeatingGapDuringSecondPeriod, minHeatingPeriod, firstGapSize,
+                    timeStepsInFirstPeriod, heatingNeedDuringFirstPeriod, prevEndsInHeating, heatingToForceAtStart,
+                    maxSolvingTime);
             var heating = result.heating();
             if ((result.status() == MPSolver.ResultStatus.OPTIMAL || result.status() == MPSolver.ResultStatus.FEASIBLE)
                     && heating != null) {
@@ -278,9 +311,10 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
 
     protected static OptimizationResult optimizeHeatingWithLinearProgramming(double[] prices, int totalHeatingNeed,
             int maxHeatingGapDuringFirstPeriod, int maxHeatingGapDuringSecondPeriod, int maxStartsDuringFirstPeriod,
-            int maxStartsDuringSecondPeriod, int minHeatingPeriod, int firstGapSize, int firstPeriodLength,
-            int heatingNeedDuringFirstPeriod, boolean previousPeriodEndsInHeating, int heatingToForceAtStart,
-            long solvingTimeLimit) {
+            int maxStartsDuringSecondPeriod, int requiredHeatingAfterMaxHeatingGapDuringFirstPeriod,
+            int requiredHeatingAfterMaxHeatingGapDuringSecondPeriod, int minHeatingPeriod, int firstGapSize,
+            int firstPeriodLength, int heatingNeedDuringFirstPeriod, boolean previousPeriodEndsInHeating,
+            int heatingToForceAtStart, long solvingTimeLimit) {
         int heatingNeedDuringSecondPeriod = totalHeatingNeed - heatingNeedDuringFirstPeriod;
 
         OrToolsNativeLoader.load();
@@ -355,6 +389,17 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
         int secondPeriodEnd = n - maxHeatingGapDuringSecondPeriod - 1;
         for (int t = firstPeriodEnd; t <= secondPeriodEnd; t++) {
             addMaxGapConstraint(t, maxHeatingGapDuringSecondPeriod, solver, heating);
+        }
+
+        for (int t = 0; t < n; t++) {
+            int maxHeatingGap = t < firstPeriodLength ? maxHeatingGapDuringFirstPeriod
+                    : maxHeatingGapDuringSecondPeriod;
+            int requiredHeating = t < firstPeriodLength ? requiredHeatingAfterMaxHeatingGapDuringFirstPeriod
+                    : requiredHeatingAfterMaxHeatingGapDuringSecondPeriod;
+            int intervalLength = maxHeatingGap + requiredHeating;
+            if (requiredHeating > 0 && t + intervalLength <= n) {
+                addRequiredHeatingAfterMaxHeatingGapConstraint(t, intervalLength, requiredHeating, solver, heating);
+            }
         }
 
         // Minimum continuous heating period
@@ -521,6 +566,15 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
         int end = Math.min(gap + 1, heating.length - 1);
         for (int i = 0; i < end; i++) {
             maxGap.setCoefficient(heating[t + i], 1);
+        }
+    }
+
+    protected static void addRequiredHeatingAfterMaxHeatingGapConstraint(int start, int intervalLength,
+            int requiredHeating, MPSolver solver, MPVariable[] heating) {
+        MPConstraint requiredHeatingConstraint = solver.makeConstraint(requiredHeating, MPSolver.infinity(),
+                "RequiredHeatingAfterMaxHeatingGap_" + start);
+        for (int t = start; t < start + intervalLength; t++) {
+            requiredHeatingConstraint.setCoefficient(heating[t], 1);
         }
     }
 

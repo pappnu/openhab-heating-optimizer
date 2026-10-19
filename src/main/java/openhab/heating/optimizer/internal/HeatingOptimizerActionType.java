@@ -26,6 +26,8 @@ public class HeatingOptimizerActionType extends ActionType {
     public static final String CONFIG_HEATING_NEEDS = "heatingNeeds";
     public static final String CONFIG_GAP_TEMPERATURES = "gapTemperatures";
     public static final String CONFIG_GAPS = "gaps";
+    public static final String CONFIG_REQUIRED_HEATING_AFTER_MAX_HEATING_GAP_TEMPERATURES = "requiredHeatingAfterMaxHeatingGapTemperatures";
+    public static final String CONFIG_REQUIRED_HEATING_AFTER_MAX_HEATING_GAP = "requiredHeatingAfterMaxHeatingGap";
     public static final String CONFIG_MAX_STARTS_TEMPERATURES = "maxStartsTemperatures";
     public static final String CONFIG_MAX_STARTS = "maxStarts";
     public static final String CONFIG_MIN_CONTINUOUS_HEATING_PERIOD = "minHeatingPeriod";
@@ -72,6 +74,16 @@ public class HeatingOptimizerActionType extends ActionType {
                 .withRequired(true)
                 .withLabel("The hours heating may be continuously off at each temperature level, e.g. '1.0,4.5,24.0'.")
                 .build();
+        final ConfigDescriptionParameter requiredHeatingAfterMaxHeatingGapTemperatures = ConfigDescriptionParameterBuilder
+                .create(CONFIG_REQUIRED_HEATING_AFTER_MAX_HEATING_GAP_TEMPERATURES, Type.TEXT)
+                .withLabel(
+                        "Ascending average temperature levels for required heating after a max heating gap, e.g. '-20.0,0.5,15'.")
+                .build();
+        final ConfigDescriptionParameter requiredHeatingAfterMaxHeatingGap = ConfigDescriptionParameterBuilder
+                .create(CONFIG_REQUIRED_HEATING_AFTER_MAX_HEATING_GAP, Type.TEXT)
+                .withLabel(
+                        "The hours of heating required after a max heating gap at each temperature level, e.g. '2.0,1.0,0.0'.")
+                .build();
         final ConfigDescriptionParameter maxStartsTemperatures = ConfigDescriptionParameterBuilder
                 .create(CONFIG_MAX_STARTS_TEMPERATURES, Type.TEXT)
                 .withLabel("Ascending average temperature levels for max starts, e.g. '-20.0,0.5,15'.").build();
@@ -99,8 +111,8 @@ public class HeatingOptimizerActionType extends ActionType {
         List<ConfigDescriptionParameter> config = new ArrayList<ConfigDescriptionParameter>();
         Collections.addAll(config, persistenceServiceId, spotPrices, airTemperatures, heatingNeedPredictionModel,
                 solarForecast, targetInsideTemperature, heatingTemperatures, heatingNeeds, gapTemperatures, gaps,
-                maxStartsTemperatures, maxStarts, minContHeatingPeriod, maxSolvingTime, priceFloorSoft, priceFloorHard,
-                heatingControlItem);
+                requiredHeatingAfterMaxHeatingGapTemperatures, requiredHeatingAfterMaxHeatingGap, maxStartsTemperatures,
+                maxStarts, minContHeatingPeriod, maxSolvingTime, priceFloorSoft, priceFloorHard, heatingControlItem);
         List<Input> input = new ArrayList<>();
         return new HeatingOptimizerActionType(config, input);
     }
