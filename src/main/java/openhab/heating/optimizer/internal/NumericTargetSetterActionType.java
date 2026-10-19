@@ -20,6 +20,7 @@ public class NumericTargetSetterActionType extends ActionType {
     public static final String CONFIG_BACKUP_ITEM = "backupItem";
     public static final String CONFIG_TARGET_VALUE = "targetValue";
     public static final String CONFIG_RESTORE = "restore";
+    public static final String CONFIG_SKIP_IF_CURRENT_TARGET_IS_BELOW_TARGET_VALUE = "skipIfCurrentTargetIsBelowTargetValue";
 
     public NumericTargetSetterActionType(List<ConfigDescriptionParameter> configDescriptions, List<Input> inputs) {
         super(UID, configDescriptions, "Set numeric target", "Sets a numeric target.", null, Visibility.VISIBLE, inputs,
@@ -27,17 +28,23 @@ public class NumericTargetSetterActionType extends ActionType {
     }
 
     public static ActionType initialize() {
-        var targetItem = ConfigDescriptionParameterBuilder.create(CONFIG_TARGET_ITEM, Type.TEXT).withRequired(true)
-                .withContext("item").withLabel("Target item").build();
-        var backupItem = ConfigDescriptionParameterBuilder.create(CONFIG_BACKUP_ITEM, Type.TEXT).withRequired(true)
-                .withContext("item").withLabel("Backup item").build();
-        var targetValue = ConfigDescriptionParameterBuilder.create(CONFIG_TARGET_VALUE, Type.DECIMAL)
-                .withRequired(false).withLabel("Target value").build();
-        var restore = ConfigDescriptionParameterBuilder.create(CONFIG_RESTORE, Type.BOOLEAN).withRequired(false)
-                .withDefault("false").withLabel("Restore backed up value").build();
+        final ConfigDescriptionParameter targetItem = ConfigDescriptionParameterBuilder
+                .create(CONFIG_TARGET_ITEM, Type.TEXT).withRequired(true).withContext("item").withLabel("Target item")
+                .build();
+        final ConfigDescriptionParameter backupItem = ConfigDescriptionParameterBuilder
+                .create(CONFIG_BACKUP_ITEM, Type.TEXT).withRequired(true).withContext("item").withLabel("Backup item")
+                .build();
+        final ConfigDescriptionParameter targetValue = ConfigDescriptionParameterBuilder
+                .create(CONFIG_TARGET_VALUE, Type.DECIMAL).withRequired(false).withLabel("Target value").build();
+        final ConfigDescriptionParameter restore = ConfigDescriptionParameterBuilder
+                .create(CONFIG_RESTORE, Type.BOOLEAN).withRequired(false).withDefault("false")
+                .withLabel("Restore backed up value").build();
+        final ConfigDescriptionParameter skipIfCurrentTargetIsBelowTargetValue = ConfigDescriptionParameterBuilder
+                .create(CONFIG_SKIP_IF_CURRENT_TARGET_IS_BELOW_TARGET_VALUE, Type.BOOLEAN).withRequired(false)
+                .withDefault("false").withLabel("Skip if current target is below target value").build();
 
         var config = new ArrayList<ConfigDescriptionParameter>();
-        Collections.addAll(config, targetItem, backupItem, targetValue, restore);
+        Collections.addAll(config, targetItem, backupItem, targetValue, restore, skipIfCurrentTargetIsBelowTargetValue);
         return new NumericTargetSetterActionType(config, new ArrayList<>());
     }
 }

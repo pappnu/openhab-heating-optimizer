@@ -8,4 +8,5 @@ public class NumericTargetSetterConfig {
     public String backupItem = "";
     public double targetValue;
     public boolean restore;
+    public boolean skipIfCurrentTargetIsBelowTargetValue;
 }
