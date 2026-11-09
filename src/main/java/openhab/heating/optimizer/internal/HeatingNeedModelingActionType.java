@@ -31,21 +31,23 @@ public class HeatingNeedModelingActionType extends ActionType {
     }
 
     public static ActionType initialize() {
-        var persistenceServiceId = ConfigDescriptionParameterBuilder.create(CONFIG_PERSISTENCE_SERVICE_ID, Type.TEXT)
-                .withRequired(true).withContext("persistence").withLabel("Persistence service").build();
-        var heatpumpItem = ConfigDescriptionParameterBuilder.create(CONFIG_HEATPUMP_ITEM, Type.TEXT).withRequired(true)
-                .withContext("item").withLabel("Heatpump on/off item").build();
-        var insideTemperatureItem = ConfigDescriptionParameterBuilder.create(CONFIG_INSIDE_TEMPERATURE_ITEM, Type.TEXT)
-                .withRequired(true).withContext("item").withLabel("Inside temperature item").build();
-        var outsideTemperatureItem = ConfigDescriptionParameterBuilder
+        final var persistenceServiceId = ConfigDescriptionParameterBuilder
+                .create(CONFIG_PERSISTENCE_SERVICE_ID, Type.TEXT).withRequired(true).withContext("persistence")
+                .withLabel("Persistence service").build();
+        final var heatpumpItem = ConfigDescriptionParameterBuilder.create(CONFIG_HEATPUMP_ITEM, Type.TEXT)
+                .withRequired(true).withContext("item").withLabel("Heatpump on/off item").build();
+        final var insideTemperatureItem = ConfigDescriptionParameterBuilder
+                .create(CONFIG_INSIDE_TEMPERATURE_ITEM, Type.TEXT).withRequired(true).withContext("item")
+                .withLabel("Inside temperature item").build();
+        final var outsideTemperatureItem = ConfigDescriptionParameterBuilder
                 .create(CONFIG_OUTSIDE_TEMPERATURE_ITEM, Type.TEXT).withRequired(true).withContext("item")
                 .withLabel("Outside temperature item").build();
-        var solarForecastItem = ConfigDescriptionParameterBuilder.create(CONFIG_SOLAR_FORECAST_ITEM, Type.TEXT)
+        final var solarForecastItem = ConfigDescriptionParameterBuilder.create(CONFIG_SOLAR_FORECAST_ITEM, Type.TEXT)
                 .withRequired(true).withContext("item").withLabel("Solar forecast item").build();
-        var maxDataGapDays = ConfigDescriptionParameterBuilder.create(CONFIG_MAX_DATA_GAP_DAYS, Type.INTEGER)
+        final var maxDataGapDays = ConfigDescriptionParameterBuilder.create(CONFIG_MAX_DATA_GAP_DAYS, Type.INTEGER)
                 .withRequired(true).withLabel("Maximum data gap in days").build();
-        var outputItem = ConfigDescriptionParameterBuilder.create(CONFIG_OUTPUT_ITEM, Type.TEXT).withRequired(true)
-                .withContext("item").withLabel("Output item").build();
+        final var outputItem = ConfigDescriptionParameterBuilder.create(CONFIG_OUTPUT_ITEM, Type.TEXT)
+                .withRequired(true).withContext("item").withLabel("Output item").build();
 
         var config = new ArrayList<ConfigDescriptionParameter>();
         Collections.addAll(config, persistenceServiceId, heatpumpItem, insideTemperatureItem, outsideTemperatureItem,

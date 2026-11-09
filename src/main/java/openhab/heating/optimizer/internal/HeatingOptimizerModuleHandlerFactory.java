@@ -16,6 +16,7 @@ import org.openhab.core.automation.handler.ModuleHandlerFactory;
 import org.openhab.core.common.ThreadPoolManager;
 import org.openhab.core.events.EventPublisher;
 import org.openhab.core.items.ItemRegistry;
+import org.openhab.core.thing.ThingRegistry;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
@@ -33,6 +34,9 @@ public class HeatingOptimizerModuleHandlerFactory extends BaseModuleHandlerFacto
     private @NonNullByDefault({}) ItemRegistry itemRegistry;
 
     @Reference
+    private @NonNullByDefault({}) ThingRegistry thingRegistry;
+
+    @Reference
     private @NonNullByDefault({}) EventPublisher eventPublisher;
 
     private final ScheduledExecutorService scheduler = ThreadPoolManager
@@ -44,6 +48,8 @@ public class HeatingOptimizerModuleHandlerFactory extends BaseModuleHandlerFacto
         temp.add(ContinuousPeriodOptimizerActionType.UID);
         temp.add(HeatingNeedModelingActionType.UID);
         temp.add(NumericTargetSetterActionType.UID);
+        temp.add(EntsoeHistoricalPriceActionType.UID);
+        temp.add(MonthlyAveragePaidSpotPriceActionType.UID);
         TYPES = Collections.unmodifiableCollection(temp);
     }
 
@@ -68,6 +74,12 @@ public class HeatingOptimizerModuleHandlerFactory extends BaseModuleHandlerFacto
                 break;
             case NumericTargetSetterActionType.UID:
                 moduleHandler = new NumericTargetSetterActionHandler((Action) module, itemRegistry, eventPublisher);
+                break;
+            case EntsoeHistoricalPriceActionType.UID:
+                moduleHandler = new EntsoeHistoricalPriceActionHandler((Action) module, itemRegistry, thingRegistry);
+                break;
+            case MonthlyAveragePaidSpotPriceActionType.UID:
+                moduleHandler = new MonthlyAveragePaidSpotPriceActionHandler((Action) module, itemRegistry);
                 break;
 
             default:

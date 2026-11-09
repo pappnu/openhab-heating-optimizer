@@ -1,6 +1,7 @@
 package openhab.heating.utils;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 
@@ -32,5 +33,9 @@ public class TimeUtils {
 
     public static int convertToTimeSteps(Duration duration, Duration stepLenght) {
         return Math.toIntExact(duration.dividedBy(stepLenght));
+    }
+
+    public static boolean isAtTopOfHour(Instant time) {
+        return time.getEpochSecond() % 3600 == 0 && time.getNano() == 0;
     }
 }

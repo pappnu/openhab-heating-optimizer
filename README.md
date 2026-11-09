@@ -173,3 +173,29 @@ The following settings can be configured in the UI:
 - `Solar forecast item`: Item containing the solar forecast values used to estimate the daily solar exposure.
 - `Maximum data gap in days`: Maximum consecutive missing days to tolerate before stopping the backward data lookup.
 - `Output item`: Item where the fitted model is stored as JSON.
+
+### Entso-E historical price
+
+Fetches historical spot prices from Entso-E.
+
+The following settings can be configured in the UI:
+
+- `Entso-E thing`: Thing instance of official Entso-E binding.
+- `Persistence service`: ID of the persistence service to use for fetching and storing data.
+- `Spot prices item`: Item where the fetched historical prices are stored.
+- `Number of past days to fetch`: Number of recent days to retrieve.
+- `Start time (ISO-8601 with offset)`: Start timestamp for the fetch period.
+- `End time (ISO-8601 with offset)`: End timestamp for the fetch period.
+- `Price multiplier`: Optional multiplier applied to each fetched price before persistence. Defaults to _1_. Use this to add e.g. VAT to the prices.
+- `Currency override`: Overrides the currency of the saved values. By default the currency returned by Entso-E is used, e.g. eur.
+
+### Monthly average paid spot price
+
+Calculates the average paid electricity price for each month by dividing the monthly electricity cost by the monthly total electricity consumption. Monthly cost values are expected to be persisted at local midnight on the first day of each month.
+
+The following settings can be configured in the UI:
+
+- `Persistence service`: ID of the persistence service to use for fetching and storing data.
+- `Electricity costs item`: Item containing the monthly electricity costs.
+- `Electricity consumption item`: Item containing the monthly electricity consumption values.
+- `Output item`: Item where the computed monthly average paid spot prices are stored.
