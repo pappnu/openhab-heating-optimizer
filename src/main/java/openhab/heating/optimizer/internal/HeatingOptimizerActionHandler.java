@@ -281,7 +281,8 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
                                 conf.persistenceServiceId)),
                         Items.getStateDouble(
                                 PersistenceExtensions.averageBetween(spotPricesItem, tomorrow, tomorrow.plusDays(1))),
-                        timeStepsInFirstPeriod, conf.priceFloorSoft, conf.priceFloorHard, minHeatingPeriod);
+                        timeStepsInFirstPeriod, conf.priceFloorSoft, conf.priceFloorHard, minHeatingPeriod,
+                        prevEndsInHeating);
                 Items.persistControlPoints(heatingControlItem, heatingPoints, optStart, timeStep,
                         conf.persistenceServiceId);
 
@@ -584,7 +585,7 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
 
     protected static double[] applyHeatingBasedOnThresholds(double[] heating, double[] prices,
             double firstPeriodAvgPrice, double secondPeriodAvgPrice, int firstPeriodLength, double priceFloorSoft,
-            double priceFloorHard, int minPeriodLength) {
+            double priceFloorHard, int minPeriodLength, boolean previousPeriodEndsInHeating) {
         for (int i = 0; i < heating.length; i++) {
             double avgPrice = i < firstPeriodLength ? firstPeriodAvgPrice : secondPeriodAvgPrice;
             if (prices[i] < priceFloorHard || prices[i] < priceFloorSoft && prices[i] < avgPrice) {
@@ -603,7 +604,7 @@ public class HeatingOptimizerActionHandler extends BaseModuleHandler<Action> imp
             while (periodEnd < heating.length && heating[periodEnd] == 1) {
                 periodEnd++;
             }
-            if (periodEnd - periodStart < minPeriodLength) {
+            if (periodEnd - periodStart < minPeriodLength && !(periodStart == 0 && previousPeriodEndsInHeating)) {
                 Arrays.fill(heating, periodStart, periodEnd, 0);
             }
             periodStart = periodEnd;

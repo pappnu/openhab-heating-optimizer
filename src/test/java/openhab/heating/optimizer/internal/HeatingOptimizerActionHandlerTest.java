@@ -118,9 +118,31 @@ public class HeatingOptimizerActionHandlerTest {
         double[] prices = { 10, 2, 2, 10, 2, 10, 1, 10 };
 
         var result = HeatingOptimizerActionHandler.applyHeatingBasedOnThresholds(heating, prices,
-                MathUtils.average(prices, 0, 4), MathUtils.average(prices, 4, prices.length), 4, 5, 2, 2);
+                MathUtils.average(prices, 0, 4), MathUtils.average(prices, 4, prices.length), 4, 5, 2, 2, false);
 
         assertArrayEquals(new double[] { 0, 1, 1, 0, 0, 0, 1, 1 }, result);
+    }
+
+    @Test
+    public void testHeatingThresholdsPreserveContinuationAtOptimizationStart() {
+        double[] heating = { 1, 0, 0, 0 };
+        double[] prices = { 10, 10, 10, 10 };
+
+        var result = HeatingOptimizerActionHandler.applyHeatingBasedOnThresholds(heating, prices, 10, 10, 4, 5, 2, 4,
+                true);
+
+        assertArrayEquals(new double[] { 1, 0, 0, 0 }, result);
+    }
+
+    @Test
+    public void testHeatingThresholdsRemoveShortNewPeriodAtOptimizationStart() {
+        double[] heating = { 1, 0, 0, 0 };
+        double[] prices = { 10, 10, 10, 10 };
+
+        var result = HeatingOptimizerActionHandler.applyHeatingBasedOnThresholds(heating, prices, 10, 10, 4, 5, 2, 4,
+                false);
+
+        assertArrayEquals(new double[] { 0, 0, 0, 0 }, result);
     }
 
     protected static double[] testSuccessfulHeatingOptimization(double[] prices, int totalHeatingNeed,
