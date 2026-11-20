@@ -28,8 +28,11 @@ The following settings can be configured in the UI:
 - `Persistence service`: ID of the persistence service to use for fetching and storing data.
 - `Spot prices item`: Item containing the spot prices.
 - `Air temperatures item`: Item containing the air temperatures used to determine heating demand.
+- `Heating need prediction model item`: Optional item containing a trained heating need model. When specified the model is used instead of the below heating need levels.
 - `Ascending average temperature levels for heating needs`: Temperature thresholds for the heating-demand curve, e.g. _-20.0,0.5,15_.
 - `Heating hours required at each temperature level`: Required heating hours at each configured temperature level, e.g. _24.0,10,0.0_.
+- `Temperature drop time model item`: Optional item containing a trained temperature drop time model. When configured, its prediction determines the maximum allowed non-heating duration instead of the gap tables.
+- `Max allowed temperature drop for max heating gap estimation`: Temperature drop used as the temperature drop model's prediction target. When specified the model is used instead of the below gap levels.
 - `Ascending average temperature levels for max heating gaps`: Temperature thresholds for the maximum allowed non-heating gaps, e.g. _-20.0,0.5,15_.
 - `The hours heating may be continuously off at each temperature level`: Maximum allowed non-heating duration at each configured temperature level, e.g. _1.0,4.5,24.0_.
 - `Ascending average temperature levels for max starts`: Temperature thresholds for the maximum number of heating starts, e.g. _-20.0,0.5,15_.
@@ -167,9 +170,23 @@ Heating need modeling trains a polynomial model that estimates how many hours th
 The following settings can be configured in the UI:
 
 - `Persistence service`: ID of the persistence service to use for fetching and storing data.
-- `Heatpump on/off item`: Item containing the heat pump operating state.
+- `Heating on/off item`: Item containing the heating device operating state.
 - `Inside temperature item`: Item containing the indoor temperature used to estimate heating demand.
 - `Outside temperature item`: Item containing the outdoor temperature used to estimate heating demand.
+- `Solar forecast item`: Item containing the solar forecast values used to estimate the daily solar exposure.
+- `Maximum data gap in days`: Maximum consecutive missing days to tolerate before stopping the backward data lookup.
+- `Output item`: Item where the fitted model is stored as JSON.
+
+### Temperature drop time modeling
+
+Temperature drop time modeling trains a polynomial model that estimates how many hours it takes for the indoor temperature to drop by a given amount while heating is off. The estimate uses the average outdoor temperature and total solar exposure for the day.
+
+The following settings can be configured in the UI:
+
+- `Persistence service`: ID of the persistence service to use for fetching data.
+- `Heating on/off item`: Item containing the heating device operating state.
+- `Inside temperature item`: Item containing the indoor temperature used to measure cooling.
+- `Outside temperature item`: Item containing the outdoor temperature used to estimate cooling.
 - `Solar forecast item`: Item containing the solar forecast values used to estimate the daily solar exposure.
 - `Maximum data gap in days`: Maximum consecutive missing days to tolerate before stopping the backward data lookup.
 - `Output item`: Item where the fitted model is stored as JSON.

@@ -35,7 +35,7 @@ public class HeatingNeedModelingActionType extends ActionType {
                 .create(CONFIG_PERSISTENCE_SERVICE_ID, Type.TEXT).withRequired(true).withContext("persistence")
                 .withLabel("Persistence service").build();
         final var heatpumpItem = ConfigDescriptionParameterBuilder.create(CONFIG_HEATPUMP_ITEM, Type.TEXT)
-                .withRequired(true).withContext("item").withLabel("Heatpump on/off item").build();
+                .withRequired(true).withContext("item").withLabel("Heating device on/off item").build();
         final var insideTemperatureItem = ConfigDescriptionParameterBuilder
                 .create(CONFIG_INSIDE_TEMPERATURE_ITEM, Type.TEXT).withRequired(true).withContext("item")
                 .withLabel("Inside temperature item").build();

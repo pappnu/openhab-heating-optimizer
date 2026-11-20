@@ -31,6 +31,7 @@ import smile.regression.OLS;
 @NonNullByDefault
 public class HeatingNeedModelingActionHandler extends BaseModuleHandler<Action> implements ActionHandler {
     private static final int POLYNOMIAL_DEGREE = 2;
+    private static final int NUMBER_OF_PREDICTOR_VARIABLES = 2;
 
     private final ItemRegistry itemRegistry;
     private final EventPublisher eventPublisher;
@@ -54,7 +55,7 @@ public class HeatingNeedModelingActionHandler extends BaseModuleHandler<Action> 
         var results = collectData(heatpumpItem, outsideTemperatureItem, solarForecastItem, insideTemperatureItem,
                 config.maxDataGapDays, ZonedDateTime.now().minusDays(1), config.persistenceServiceId);
 
-        if (results.size() > POLYNOMIAL_DEGREE) {
+        if (results.size() > NUMBER_OF_PREDICTOR_VARIABLES) {
             var model = fit(results, POLYNOMIAL_DEGREE);
             eventPublisher.post(
                     ItemEventFactory.createCommandEvent(outputItem.getName(), new StringType(gson.toJson(model))));
@@ -62,12 +63,12 @@ public class HeatingNeedModelingActionHandler extends BaseModuleHandler<Action> 
         } else {
             logger.error(
                     "Heating need modeling found {} valid records. At least {} records are required to fit the model.",
-                    results.size(), POLYNOMIAL_DEGREE + 1);
+                    results.size(), NUMBER_OF_PREDICTOR_VARIABLES + 1);
         }
         return null;
     }
 
-    protected static PolynomialHeatingNeedModel fit(List<DailyHeatingNeed> data, int degree) {
+    protected static PolynomialModel fit(List<DailyHeatingNeed> data, int degree) {
         if (data.size() <= degree) {
             throw new IllegalArgumentException(
                     "At least %d records are required to fit the heating need model. Found %d records"
@@ -87,8 +88,7 @@ public class HeatingNeedModelingActionHandler extends BaseModuleHandler<Action> 
         return fit(new double[][] { temperatureDeltas, solarExposures }, heatingHours, degree);
     }
 
-    protected static PolynomialHeatingNeedModel fit(double[][] independentVariables, double[] dependentVariable,
-            int degree) {
+    protected static PolynomialModel fit(double[][] independentVariables, double[] dependentVariable, int degree) {
         var scaling = calculateScaling(independentVariables);
         var preparedData = preparePolynomialData(scale(independentVariables, scaling), degree);
         var trainingData = new double[preparedData.length][preparedData[0].length + 1];
@@ -108,7 +108,7 @@ public class HeatingNeedModelingActionHandler extends BaseModuleHandler<Action> 
         var modelCoefficients = new double[coefficients.length + 1];
         modelCoefficients[0] = model.intercept();
         System.arraycopy(coefficients, 0, modelCoefficients, 1, coefficients.length);
-        return new PolynomialHeatingNeedModel(modelCoefficients, independentVariables.length, degree, scaling.means,
+        return new PolynomialModel(modelCoefficients, independentVariables.length, degree, scaling.means,
                 scaling.standardDeviations);
     }
 
@@ -241,7 +241,7 @@ public class HeatingNeedModelingActionHandler extends BaseModuleHandler<Action> 
     private record Scaling(double[] means, double[] standardDeviations) {
     }
 
-    public record PolynomialHeatingNeedModel(double[] coefficients, int variableCount, int degree, double[] means,
+    public record PolynomialModel(double[] coefficients, int variableCount, int degree, double[] means,
             double[] standardDeviations) {
         public double estimate(double[] independentVariables) {
             if (independentVariables.length != variableCount) {
@@ -249,6 +249,7 @@ public class HeatingNeedModelingActionHandler extends BaseModuleHandler<Action> 
             }
 
             var variables = new double[variableCount][1];
+            // Scale values
             for (int variableIndex = 0; variableIndex < variableCount; variableIndex++) {
                 variables[variableIndex][0] = (independentVariables[variableIndex] - means[variableIndex])
                         / standardDeviations[variableIndex];

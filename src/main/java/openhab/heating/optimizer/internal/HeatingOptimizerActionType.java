@@ -24,6 +24,8 @@ public class HeatingOptimizerActionType extends ActionType {
     public static final String CONFIG_TARGET_INSIDE_TEMPERATURE = "targetInsideTemperature";
     public static final String CONFIG_HEATING_TEMPERATURES = "heatingTemperatures";
     public static final String CONFIG_HEATING_NEEDS = "heatingNeeds";
+    public static final String CONFIG_TEMPERATURE_DROP_MODEL = "temperatureDropModelItem";
+    public static final String CONFIG_TEMPERATURE_DROP_FOR_MAX_GAP = "temperatureDropForMaxGap";
     public static final String CONFIG_GAP_TEMPERATURES = "gapTemperatures";
     public static final String CONFIG_GAPS = "gaps";
     public static final String CONFIG_REQUIRED_HEATING_AFTER_MAX_HEATING_GAP_TEMPERATURES = "requiredHeatingAfterMaxHeatingGapTemperatures";
@@ -67,6 +69,12 @@ public class HeatingOptimizerActionType extends ActionType {
         final ConfigDescriptionParameter heatingNeeds = ConfigDescriptionParameterBuilder
                 .create(CONFIG_HEATING_NEEDS, Type.TEXT).withRequired(true)
                 .withLabel("Heating hours required at each temperature level, e.g. '24.0,10,0.0'.").build();
+        final ConfigDescriptionParameter temperatureDropModel = ConfigDescriptionParameterBuilder
+                .create(CONFIG_TEMPERATURE_DROP_MODEL, Type.TEXT).withRequired(false).withContext("item")
+                .withLabel("Temperature drop time model item").build();
+        final ConfigDescriptionParameter temperatureDropForMaxGap = ConfigDescriptionParameterBuilder
+                .create(CONFIG_TEMPERATURE_DROP_FOR_MAX_GAP, Type.DECIMAL).withRequired(false).withDefault("1.0")
+                .withLabel("Max allowed temperature drop for max heating gap estimation").build();
         final ConfigDescriptionParameter gapTemperatures = ConfigDescriptionParameterBuilder
                 .create(CONFIG_GAP_TEMPERATURES, Type.TEXT).withRequired(true)
                 .withLabel("Ascending average temperature levels for max heating gaps, e.g. '-20.0,0.5,15'.").build();
@@ -110,9 +118,10 @@ public class HeatingOptimizerActionType extends ActionType {
 
         List<ConfigDescriptionParameter> config = new ArrayList<ConfigDescriptionParameter>();
         Collections.addAll(config, persistenceServiceId, spotPrices, airTemperatures, heatingNeedPredictionModel,
-                solarForecast, targetInsideTemperature, heatingTemperatures, heatingNeeds, gapTemperatures, gaps,
-                requiredHeatingAfterMaxHeatingGapTemperatures, requiredHeatingAfterMaxHeatingGap, maxStartsTemperatures,
-                maxStarts, minContHeatingPeriod, maxSolvingTime, priceFloorSoft, priceFloorHard, heatingControlItem);
+                solarForecast, targetInsideTemperature, heatingTemperatures, heatingNeeds, temperatureDropModel,
+                temperatureDropForMaxGap, gapTemperatures, gaps, requiredHeatingAfterMaxHeatingGapTemperatures,
+                requiredHeatingAfterMaxHeatingGap, maxStartsTemperatures, maxStarts, minContHeatingPeriod,
+                maxSolvingTime, priceFloorSoft, priceFloorHard, heatingControlItem);
         List<Input> input = new ArrayList<>();
         return new HeatingOptimizerActionType(config, input);
     }

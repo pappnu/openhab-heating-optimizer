@@ -21,12 +21,28 @@ public class HeatingOptimizerActionHandlerTest {
 
     @Test
     public void testHeatingNeedPredictionModel() {
-        var model = new HeatingNeedModelingActionHandler.PolynomialHeatingNeedModel(new double[] { 2, 3, 5 }, 2, 1,
+        var model = new HeatingNeedModelingActionHandler.PolynomialModel(new double[] { 2, 3, 5 }, 2, 1,
                 new double[] { 0, 0 }, new double[] { 1, 1 });
 
         assertEquals(67,
                 HeatingOptimizerActionHandler.predictHeatingNeed(model, new double[] {}, new double[] {}, 4, 4, 19),
                 0.000001);
+    }
+
+    @Test
+    public void testMaxHeatingGapPredictionModel() {
+        var model = new HeatingNeedModelingActionHandler.PolynomialModel(new double[] { 10, 0, 2, 0 }, 3, 1,
+                new double[] { 2, 3, 4 }, new double[] { 1, 1, 1 });
+
+        assertEquals(20,
+                HeatingOptimizerActionHandler.predictMaxHeatingGap(model, new double[] {}, new double[] {}, 8, 5, 7),
+                0.000001);
+    }
+
+    @Test
+    public void testMaxHeatingGapPredictionFallsBackToConfiguredValues() {
+        assertEquals(4, HeatingOptimizerActionHandler.predictMaxHeatingGap(null, new double[] { -10, 10 },
+                new double[] { 2, 6 }, 0, 5, 7), 0.000001);
     }
 
     @Test

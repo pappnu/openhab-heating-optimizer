@@ -25,6 +25,8 @@ public class HeatingOptimizerModuleTypeProvider implements ModuleTypeProvider {
         providedModuleTypes.put(ContinuousPeriodOptimizerActionType.UID,
                 ContinuousPeriodOptimizerActionType.initialize());
         providedModuleTypes.put(HeatingNeedModelingActionType.UID, HeatingNeedModelingActionType.initialize());
+        providedModuleTypes.put(TemperatureDropTimeModelingActionType.UID,
+                TemperatureDropTimeModelingActionType.initialize());
         providedModuleTypes.put(NumericTargetSetterActionType.UID, NumericTargetSetterActionType.initialize());
         providedModuleTypes.put(EntsoeHistoricalPriceActionType.UID, EntsoeHistoricalPriceActionType.initialize());
         providedModuleTypes.put(MonthlyAveragePaidSpotPriceActionType.UID,

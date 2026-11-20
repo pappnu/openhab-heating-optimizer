@@ -10,6 +10,8 @@ public class HeatingOptimizerConfig {
     public String spotPricesItem = "";
     public String airTemperaturesItem = "";
     public String heatingNeedPredictionModelItem = "";
+    public String temperatureDropModelItem = "";
+    public double temperatureDropForMaxGap = 1.0;
     public String solarForecastItem = "";
     public double targetInsideTemperature = 19;
     public String heatingTemperatures = "";
